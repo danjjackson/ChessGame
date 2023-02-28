@@ -33,7 +33,7 @@ class MoveType(ABC):
         self.limit = limit
 
     @abstractmethod
-    def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
+    def get_valid_moves(self, board: Board, file: str, rank: str) -> list[Position]:
         pass
 
 
@@ -42,7 +42,7 @@ class Vertical(MoveType):
         super().__init__(limit=limit)
         self.orientation = orientation
 
-    def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
+    def get_valid_moves(self, board: Board, file: str, rank: str) -> list[Position]:
         valid_moves: list[Position] = []
         if self.orientation == Colour.WHITE or self.orientation == Colour.BLANK:
             for i in range(1, 8 - x):

@@ -91,16 +91,24 @@ class Piece:
     move_type: dict[str, list[MoveType]] = field(default_factory=dict)
     colour: Colour = Colour.BLANK
     type: PieceType = PieceType.EMPTY
-    has_moved: bool = False
     moves_made: int = 0
     last_moved: int = 0
 
     def move(self) -> None:
-        self.has_moved = True
         self.moves_made += 1
         if self.type == PieceType.PAWN:
             for move_type in self.move_type["regular"]:
                 move_type.limit = 1
+
+    def undo(self):
+        self.moves_made -= 1
+        if self.type == PieceType.PAWN and self.moves_made == 0:
+            for move_type in self.move_type["regular"]:
+                move_type.limit = 2
+
+    @property
+    def has_moved(self) -> bool:
+        return self.moves_made > 0
 
     def promote_to(self, piece: PieceType) -> None:
         self.type = piece

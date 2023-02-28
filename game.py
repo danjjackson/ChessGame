@@ -31,22 +31,22 @@ class Game:
             print(move.move_category.value)
 
             try:
-                possible_pieces = turn.find_possible_pieces(move.piece)
+                possible_squares = turn.find_possible_squares(move.piece)
             except IllegalMoveError:
                 print("There are no pieces of that colour on the board")
                 continue
-            print(possible_pieces)
+            # print(possible_squares)
             try:
-                selected_piece = turn.find_valid_piece(
-                    possible_pieces, move.move_category, move.dest
+                source_square = turn.find_valid_square(
+                    possible_squares, move.move_category, move.dest
                 )
-                print(selected_piece)
+                print(source_square.piece)
             except IllegalMoveError:
                 print("Invalid move")
                 continue
 
             try:
-                turn.complete_move(selected_piece, move.dest, move.move_category)
+                turn.complete_move(source_square, move.dest, move.move_category)
             except IllegalMoveError:
                 print("You cannot castle out of check!")
                 continue

@@ -7,15 +7,17 @@ from typing import Callable
 from pieces import Colour, Piece, PieceType
 from square import Square
 
-Position = tuple[int, int]
+Position = tuple[str, str]
 Grid = dict[Position, Square]
+
+notation_map = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "h"}
 
 
 def empty_board() -> Grid:
     grid: Grid = {}
-    for x in range(8):
-        for y in range(8):
-            grid[(x, y)] = Square()
+    for file in "abcdefgh":
+        for rank in "12345678":
+            grid[(file, rank)] = Square(file, rank)
     return grid
 
 
@@ -32,29 +34,33 @@ class Board:
         board = Board(orientation=turn)
         fenlist = fen.split("/")
 
-        for ind_row, row in enumerate(fenlist):
+        for ind_rank, rank in enumerate(fenlist):
             column = 0
-            for ind_col, char in enumerate(row):
+            for ind_file, char in enumerate(rank):
                 if char.isnumeric():
                     column += int(char) - 1
                     continue
-                board.place(Piece.from_fen(ind_row, ind_col + column, char))
-            if column + ind_col != 7:
+                board.place(
+                    notation_map[ind_file + column],
+                    str(ind_rank + 1),
+                    Piece.from_fen(char),
+                )
+            if column + ind_file != 7:
                 raise ValueError("Invalid FEN string")
             column = 0
         return board
 
-    def place(self, x: int, y: int, piece: Piece):
-        self.squares[(x, y)].piece = piece
+    def place(self, file: str, rank: str, piece: Piece):
+        self.squares[(file, rank)].piece = piece
 
-    def piece(self, x: int, y: int) -> Piece:
-        return self.squares[(x, y)].piece
+    def piece(self, file: str, rank: str) -> Piece:
+        return self.squares[(file, rank)].piece
 
-    def empty(self, x: int, y: int) -> None:
-        self.squares[(x, y)] = Square(x, y)
+    def empty(self, file: str, rank: str) -> None:
+        self.squares[(file, rank)] = Square(file, rank)
 
-    def is_empty(self, x: int, y: int) -> bool:
-        return self.piece(x, y).type == PieceType.EMPTY
+    def is_empty(self, file: str, rank: str) -> bool:
+        return self.squares[(file, rank)].is_empty
 
     def find_king(self, colour: Colour) -> Square:
         return self.find_pieces(PieceType.KING, colour)[0]
@@ -70,20 +76,24 @@ class Board:
     def __str__(self):
         board_repr = ""
         if self.orientation == Colour.WHITE:
-            for x in range(7, -1, -1):
-                for y in range(8):
-                    board_repr = board_repr + f"| {str(self.squares[(x, y)].piece)} "
+            for rank in "87654321":
+                for file in "abcdefgh":
+                    board_repr = (
+                        board_repr + f"| {str(self.squares[(file, rank)].piece)} "
+                    )
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
         else:
-            for x in range(8):
-                for y in range(7, -1, -1):
-                    board_repr = board_repr + f"| {str(self.squares[(x, y)].piece)} "
+            for rank in "12345678":
+                for file in "hgfedcba":
+                    board_repr = (
+                        board_repr + f"| {str(self.squares[(file, rank)].piece)} "
+                    )
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
 
         return board_repr
 
 
-ValidMoveCalculator = Callable[[Board, int, int], list[Position]]
+# ValidMoveCalculator = Callable[[Board, int, int], list[Position]]
 
 # MOVE_LISTS: dict[PieceType, list[ValidMoveCalculator]] = {
 #     PieceType.ROOK: [get_valid_horizontal_moves, get_valid_vertical_moves],

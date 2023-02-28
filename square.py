@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pieces import Piece, PieceType
 
@@ -9,15 +9,15 @@ from pieces import Piece, PieceType
 class Square:
     rank: str
     file: str
-    piece: Piece = Piece()
+    piece: Piece = field(default_factory=Piece)
 
     @property
     def is_empty(self) -> bool:
         return self.piece.type == PieceType.EMPTY
 
-    def move_piece(self, destination: Square):
+    def move_piece(self, destination: Square, undo: bool = False):
         piece = self.piece
-        piece.move()
+        piece.move() if not undo else piece.undo()
         destination.piece = piece
 
         self.piece = Piece()

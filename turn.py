@@ -3,6 +3,7 @@ from typing import Tuple
 from board import Board, Position
 from move import Move, MoveCategory
 from pieces import FEN_MAP, Colour, Piece, PieceType
+from square import Square
 from utils import get_moves, king_is_in_check
 
 
@@ -21,26 +22,26 @@ class Turn:
         self.board = board
 
     def enter_move(self, player) -> Move:
-        return Move.parse_move(player)
+        return Move.parse_move(self.board, player)
 
-    def find_possible_pieces(self, selected_piece_type: PieceType) -> list[Piece]:
-        possible_pieces = self.board.find_pieces(selected_piece_type, self.player)
-        if not len(possible_pieces):
+    def find_possible_squares(self, selected_piece_type: PieceType) -> list[Square]:
+        possible_squares = self.board.find_pieces(selected_piece_type, self.player)
+        if not len(possible_squares):
             raise IllegalMoveError(
                 f"There is no {self.player} {selected_piece_type} on the board!"
             )
-        return possible_pieces
+        return possible_squares
 
-    def find_valid_piece(
-        self, possible_pieces: list[Piece], move_category: MoveCategory, destination
-    ) -> Piece:
-        valid_pieces: list[Piece] = []
+    def find_valid_square(
+        self, possible_pieces: list[Square], move_category: MoveCategory, destination
+    ) -> Square:
+        valid_pieces: list[Square] = []
 
-        for piece in possible_pieces:
-            valid_moves = get_moves(self.board, piece, move_category)
+        for square in possible_pieces:
+            valid_moves = get_moves(self.board, square.piece, move_category)
 
             if destination in valid_moves:
-                valid_pieces.append(piece)
+                valid_pieces.append(square)
 
         if len(valid_pieces) == 0:
             raise IllegalMoveError("Invalid move")
@@ -50,10 +51,8 @@ class Turn:
             return valid_pieces[0]
 
     def complete_move(
-        self, piece: Piece, destination: Position, move_category: MoveCategory
+        self, source: Square, destination: Square, move_category: MoveCategory
     ):
-        source = (piece.x, piece.y)
-
         if (
             move_category == MoveCategory.SHORT_CASTLE
             or move_category == MoveCategory.LONG_CASTLE
@@ -74,12 +73,15 @@ class Turn:
                 self.board.place(rook)
                 self.board.empty(piece.x, piece.y - 4)
 
-        self.board.empty(piece.x, piece.y)
-        piece.move_to(*destination)
-        self.board.place(piece)
+        source.move_piece(destination)
+
+        # self.board.empty(piece.x, piece.y)
+        # piece.move_to(*destination)
+        # self.board.place(piece)
 
         if king_is_in_check(self.board, self.player):
-            self.board.empty(piece.x, piece.y)
-            piece.move_to(*source)
-            self.board.place(piece)
+            # self.board.empty(piece.x, piece.y)
+            # piece.move_to(*source)
+            # self.board.place(piece)
+            destination.move_piece(source, undo=True)
             raise IllegalMoveError("Your king is in check!")
