@@ -5,22 +5,23 @@ from functools import partial
 from typing import Callable
 
 from pieces import Colour, Piece, PieceType
+from square import Square
 
 Position = tuple[int, int]
-Grid = dict[Position, Piece]
+Grid = dict[Position, Square]
 
 
 def empty_board() -> Grid:
     grid: Grid = {}
     for x in range(8):
         for y in range(8):
-            grid[(x, y)] = Piece(x, y)
+            grid[(x, y)] = Square()
     return grid
 
 
 @dataclass
 class Board:
-    pieces: Grid = field(default_factory=empty_board)
+    squares: Grid = field(default_factory=empty_board)
     orientation: Colour = Colour.WHITE
 
     @staticmethod
@@ -43,41 +44,40 @@ class Board:
             column = 0
         return board
 
-    def place(self, piece: Piece):
-        self.pieces[(piece.x, piece.y)] = piece
+    def place(self, x: int, y: int, piece: Piece):
+        self.squares[(x, y)].piece = piece
 
     def piece(self, x: int, y: int) -> Piece:
-        return self.pieces[(x, y)]
+        return self.squares[(x, y)].piece
 
     def empty(self, x: int, y: int) -> None:
-        self.pieces[(x, y)] = Piece(x, y)
+        self.squares[(x, y)] = Square(x, y)
 
     def is_empty(self, x: int, y: int) -> bool:
         return self.piece(x, y).type == PieceType.EMPTY
 
-    def find_king(self, colour: Colour) -> Position:
-        king = self.find_pieces(PieceType.KING, colour)[0]
-        return (king.x, king.y)
+    def find_king(self, colour: Colour) -> Square:
+        return self.find_pieces(PieceType.KING, colour)[0]
 
-    def find_pieces(self, piece_type: PieceType, colour: Colour) -> list[Piece]:
-        pieces = []
-        for piece in self.pieces.values():
-            if piece.type == piece_type and piece.colour == colour:
-                pieces.append(piece)
+    def find_pieces(self, piece_type: PieceType, colour: Colour) -> list[Square]:
+        squares = []
+        for square in self.squares.values():
+            if square.piece.type == piece_type and square.piece.colour == colour:
+                squares.append(square)
 
-        return pieces
+        return squares
 
     def __str__(self):
         board_repr = ""
         if self.orientation == Colour.WHITE:
             for x in range(7, -1, -1):
                 for y in range(8):
-                    board_repr = board_repr + f"| {str(self.pieces[(x, y)])} "
+                    board_repr = board_repr + f"| {str(self.squares[(x, y)].piece)} "
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
         else:
             for x in range(8):
                 for y in range(7, -1, -1):
-                    board_repr = board_repr + f"| {str(self.pieces[(x, y)])} "
+                    board_repr = board_repr + f"| {str(self.squares[(x, y)].piece)} "
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
 
         return board_repr

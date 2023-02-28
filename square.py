@@ -9,7 +9,7 @@ from pieces import Piece, PieceType
 class Square:
     rank: str
     file: str
-    piece: Piece
+    piece: Piece = Piece()
 
     @property
     def is_empty(self) -> bool:
@@ -17,5 +17,7 @@ class Square:
 
     def move_piece(self, destination: Square):
         piece = self.piece
-        self.piece = Piece()
+        piece.move()
         destination.piece = piece
+
+        self.piece = Piece()

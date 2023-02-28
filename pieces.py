@@ -88,8 +88,6 @@ FEN_MOVE_MAP: dict[str, dict[str, list[MoveType]]] = {
 
 @dataclass
 class Piece:
-    x: int
-    y: int
     move_type: dict[str, list[MoveType]] = field(default_factory=dict)
     colour: Colour = Colour.BLANK
     type: PieceType = PieceType.EMPTY
@@ -97,8 +95,7 @@ class Piece:
     moves_made: int = 0
     last_moved: int = 0
 
-    def move_to(self, x: int, y: int) -> None:
-        self.x, self.y = x, y
+    def move(self) -> None:
         self.has_moved = True
         self.moves_made += 1
         if self.type == PieceType.PAWN:
@@ -109,11 +106,9 @@ class Piece:
         self.type = piece
 
     @staticmethod
-    def from_fen(x: int, y: int, fen: str) -> Piece:
+    def from_fen(fen: str) -> Piece:
         colour = Colour.WHITE if fen.islower() else Colour.BLACK
-        return Piece(
-            x, y, deepcopy(FEN_MOVE_MAP[fen]), colour, type=FEN_MAP[fen.lower()]
-        )
+        return Piece(deepcopy(FEN_MOVE_MAP[fen]), colour, type=FEN_MAP[fen.lower()])
 
     def __str__(self):
         return PIECE_STR[self.type][self.colour.value]
