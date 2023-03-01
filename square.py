@@ -7,8 +7,8 @@ from pieces import Piece, PieceType
 
 @dataclass
 class Square:
-    rank: str
     file: str
+    rank: str
     piece: Piece = field(default_factory=Piece)
 
     @property
@@ -21,3 +21,6 @@ class Square:
         destination.piece = piece
 
         self.piece = Piece()
+
+    def __str__(self):
+        return f"There is a {str(self.piece)} on {self.file}{self.rank}"

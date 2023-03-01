@@ -31,7 +31,7 @@ class Game:
             print(move.move_category.value)
 
             try:
-                possible_squares = turn.find_possible_squares(move.piece)
+                possible_squares = turn.find_squares_with(move.piece)
             except IllegalMoveError:
                 print("There are no pieces of that colour on the board")
                 continue

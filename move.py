@@ -1,24 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum, auto
-from typing import Optional
-
-import pydantic
 
 from board import Board
-from pieces import FEN_MAP, Colour, PieceType
+from pieces import FEN_MAP, PieceType
 from square import Square
+from utils import Colour, MoveCategory
 
 Position = tuple[int, int]
 notation_map = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
-
-
-class MoveCategory(StrEnum):
-    REGULAR = auto()
-    CAPTURE = auto()
-    SHORT_CASTLE = auto()
-    LONG_CASTLE = auto()
 
 
 checks = ["+", "#"]

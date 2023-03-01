@@ -1,206 +1,159 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
-from typing import Protocol
+from typing import Callable, Protocol
 
-Position = tuple[int, int]
-
-
-class Colour(Enum):
-    BLANK = -1
-    WHITE = 0
-    BLACK = 1
-
-
-@dataclass
-class Piece(Protocol):
-    colour: Colour
-    has_moved: bool
+from pieces import PieceType
+from square import Square
+from utils import Colour, MoveCategory
 
 
 class Board(Protocol):
-    def is_empty(self, x: int, y: int) -> bool:
-        """Whether the field (x, y) is empty."""
-        raise NotImplementedError
-
-    def piece(self, x: int, y: int) -> Piece:
+    def get_square(self, file: str, rank: str) -> Square | None:
         """Returns the piece at position (x, y)."""
-        raise NotImplementedError
+        return None
 
 
-class MoveType(ABC):
-    def __init__(self, limit: int = 8):
-        self.limit = limit
-
-    @abstractmethod
-    def get_valid_moves(self, board: Board, file: str, rank: str) -> list[Position]:
-        pass
-
-
-class Vertical(MoveType):
-    def __init__(self, limit: int = 8, orientation: Colour = Colour.BLANK):
-        super().__init__(limit=limit)
-        self.orientation = orientation
-
-    def get_valid_moves(self, board: Board, file: str, rank: str) -> list[Position]:
-        valid_moves: list[Position] = []
-        if self.orientation == Colour.WHITE or self.orientation == Colour.BLANK:
-            for i in range(1, 8 - x):
-                if i > self.limit:
-                    break
-                if board.is_empty(x + i, y):
-                    valid_moves.append((x + i, y))
-                elif board.piece(x + i, y).colour != board.piece(x, y).colour:
-                    valid_moves.append((x + i, y))
-                    break
-                else:
-                    break
-
-        if self.orientation == Colour.BLACK or self.orientation == Colour.BLANK:
-            for i in range(1, x + 1):
-                if i > self.limit:
-                    break
-                if board.is_empty(x - i, y):
-                    valid_moves.append((x - i, y))
-                elif board.piece(x, y).colour != board.piece(y, x - i).colour:
-                    valid_moves.append((x - i, y))
-                    break
-                else:
-                    break
-        return valid_moves
+def get_vertical_neighbour(
+    board: Board, square: Square, orientation: Colour
+) -> Square | None:
+    return (
+        board.get_square(square.file, chr(ord(square.rank) + 1))
+        if orientation == Colour.WHITE
+        else board.get_square(square.file, chr(ord(square.rank) - 1))
+    )
 
 
-class Horizontal(MoveType):
-    def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
-        valid_moves: list[Position] = []
-        for i in range(1, 8 - y):
-            if i > self.limit:
-                break
-            if board.is_empty(x, y + i):
-                valid_moves.append((x, y + i))
-            elif board.piece(x, y).colour != board.piece(x, y + i).colour:
-                valid_moves.append((x, y + i))
-                break
-            else:
-                break
-
-        for i in range(1, y + 1):
-            if i > self.limit:
-                break
-            if board.is_empty(x, y - i):
-                valid_moves.append((x, y - i))
-            elif board.piece(x, y).colour != board.piece(x, y - i).colour:
-                valid_moves.append((x, y - i))
-                break
-            else:
-                break
-
-        return valid_moves
+def get_horizontal_neighbour(
+    board: Board, square: Square, orientation: Colour
+) -> Square | None:
+    return (
+        board.get_square(chr(ord(square.file) + 1), square.rank)
+        if orientation == Colour.WHITE
+        else board.get_square(chr(ord(square.file) - 1), square.rank)
+    )
 
 
-class Diagonal(MoveType):
-    def __init__(self, limit: int = 8, orientation: Colour = Colour.BLANK):
-        super().__init__(limit=limit)
-        self.orientation = orientation
-
-    def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
-        valid_moves: list[Position] = []
-        for i in range(1, min(8 - x, 8 - y)):
-            if i > self.limit:
-                break
-            if board.is_empty(x + i, y + i):
-                valid_moves.append((x + i, y + i))
-            elif board.piece(x, y).colour != board.piece(x + i, y + i).colour:
-                valid_moves.append((x + i, y + i))
-                break
-            else:
-                break
-
-        for i in range(1, min(x + 1, y + 1)):
-            if i > self.limit:
-                break
-            if board.is_empty(x - i, y - i):
-                valid_moves.append((x - i, y - i))
-            elif board.piece(x, y).colour != board.piece(y - i, x - i).colour:
-                valid_moves.append((x - i, y - i))
-                break
-            else:
-                break
-
-        for i in range(1, min(x + 1, 8 - y)):
-            if i > self.limit:
-                break
-            if board.is_empty(x - i, y + i):
-                valid_moves.append((x - i, y + i))
-            elif board.piece(x, y).colour != board.piece(x - i, y + i).colour:
-                valid_moves.append((x - i, y + i))
-                break
-            else:
-                break
-
-        for i in range(1, min(y + 1, 8 - x)):
-            if i > self.limit:
-                break
-            if board.is_empty(x + 1, y - i):
-                valid_moves.append((x + 1, y - i))
-            elif board.piece(x, y).colour != board.piece(x + 1, y - i).colour:
-                valid_moves.append((x + 1, y - i))
-                break
-            else:
-                break
-
-        return valid_moves
+def get_positive_diagonal_neighbour(
+    board: Board, square: Square, orientation: Colour
+) -> Square | None:
+    return (
+        board.get_square(chr(ord(square.file) + 1), chr(ord(square.rank) + 1))
+        if orientation == Colour.WHITE
+        else board.get_square(chr(ord(square.file) - 1), chr(ord(square.rank) - 1))
+    )
 
 
-class Knight(MoveType):
-    def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
-        valid_moves = []
-        moves = (
-            (x + 1, y + 2),
-            (x + 1, y - 2),
-            (x - 1, y + 2),
-            (x - 1, y - 2),
-            (x + 2, y + 1),
-            (x + 2, y - 1),
-            (x - 2, y + 1),
-            (x - 2, y - 1),
-        )
-        for new_x, new_y in moves:
-            if 0 <= new_x <= 7 and 0 <= new_y <= 7:
-                if (
-                    board.is_empty(x, y)
-                    or board.piece(x, y).colour != board.piece(new_x, new_y).colour
-                ):
-                    valid_moves.append((new_x, new_y))
-        return valid_moves
+def get_negative_diagonal_neighbour(
+    board: Board, square: Square, orientation: Colour
+) -> Square | None:
+    return (
+        board.get_square(chr(ord(square.file) - 1), chr(ord(square.rank) + 1))
+        if orientation == Colour.WHITE
+        else board.get_square(chr(ord(square.file) + 1), chr(ord(square.rank) - 1))
+    )
 
 
-class ShortCastle(MoveType):
-    def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
-        valid_moves = []
+NeighbourCalculator = Callable[[Board, Square, Colour], Square | None]
+MOVEMENT_MAP: dict[PieceType, dict[MoveCategory, list[NeighbourCalculator]]] = {
+    PieceType.PAWN: {
+        MoveCategory.REGULAR: [get_vertical_neighbour],
+        MoveCategory.CAPTURE: [
+            get_positive_diagonal_neighbour,
+            get_negative_diagonal_neighbour,
+        ],
+    },
+    PieceType.ROOK: {
+        MoveCategory.REGULAR: [get_vertical_neighbour, get_horizontal_neighbour],
+        MoveCategory.CAPTURE: [get_vertical_neighbour, get_horizontal_neighbour],
+    },
+    PieceType.BISHOP: {
+        MoveCategory.REGULAR: [
+            get_positive_diagonal_neighbour,
+            get_negative_diagonal_neighbour,
+        ],
+        MoveCategory.CAPTURE: [
+            get_positive_diagonal_neighbour,
+            get_negative_diagonal_neighbour,
+        ],
+    },
+    PieceType.QUEEN: {
+        MoveCategory.REGULAR: [
+            get_vertical_neighbour,
+            get_horizontal_neighbour,
+            get_positive_diagonal_neighbour,
+            get_negative_diagonal_neighbour,
+        ],
+        MoveCategory.CAPTURE: [
+            get_vertical_neighbour,
+            get_horizontal_neighbour,
+            get_positive_diagonal_neighbour,
+            get_negative_diagonal_neighbour,
+        ],
+    },
+    PieceType.KING: {
+        MoveCategory.REGULAR: [
+            get_vertical_neighbour,
+            get_horizontal_neighbour,
+            get_positive_diagonal_neighbour,
+            get_negative_diagonal_neighbour,
+        ],
+        MoveCategory.CAPTURE: [
+            get_vertical_neighbour,
+            get_horizontal_neighbour,
+            get_positive_diagonal_neighbour,
+            get_negative_diagonal_neighbour,
+        ],
+    },
+}
 
-        # print(board.piece(x, y).has_moved)
-        if (
-            not board.piece(x, y).has_moved
-            and not board.piece(x, y + 3).has_moved
-            and board.is_empty(x, y + 1)
-            and board.is_empty(x, y + 1)
-        ):
-            valid_moves.append((x, y + 2))
 
-        return valid_moves
+def is_valid_knight_move(board: Board, source: Square, target: Square) -> bool:
+    squares = [
+        board.get_square(chr(ord(source.file) + 1), chr(ord(source.rank) + 2)),
+        board.get_square(chr(ord(source.file) + 1), chr(ord(source.rank) - 2)),
+        board.get_square(chr(ord(source.file) - 1), chr(ord(source.rank) + 2)),
+        board.get_square(chr(ord(source.file) - 1), chr(ord(source.rank) - 2)),
+        board.get_square(chr(ord(source.file) + 2), chr(ord(source.rank) + 1)),
+        board.get_square(chr(ord(source.file) + 2), chr(ord(source.rank) - 1)),
+        board.get_square(chr(ord(source.file) - 2), chr(ord(source.rank) + 1)),
+        board.get_square(chr(ord(source.file) - 2), chr(ord(source.rank) - 1)),
+    ]
+
+    valid_squares: list[Square] = []
+
+    for square in squares:
+        if square is not None:
+            if square.is_empty or square.piece.colour != source.piece.colour:
+                valid_squares.append(square)
+
+    return target in valid_squares
 
 
-class LongCastle(MoveType):
-    def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
-        valid_moves = []
-        if (
-            not board.piece(x, y).has_moved
-            and not board.piece(x, y - 4).has_moved
-            and board.is_empty(x, y - 1)
-            and board.is_empty(x, y - 2)
-            and board.is_empty(x, y - 2)
-        ):
-            valid_moves.append((x, y - 2))
+# class ShortCastle(MoveType):
+#     def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
+#         valid_moves = []
 
-        return valid_moves
+#         # print(board.piece(x, y).has_moved)
+#         if (
+#             not board.piece(x, y).has_moved
+#             and not board.piece(x, y + 3).has_moved
+#             and board.is_empty(x, y + 1)
+#             and board.is_empty(x, y + 1)
+#         ):
+#             valid_moves.append((x, y + 2))
+
+#         return valid_moves
+
+
+# class LongCastle(MoveType):
+#     def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
+#         valid_moves = []
+#         if (
+#             not board.piece(x, y).has_moved
+#             and not board.piece(x, y - 4).has_moved
+#             and board.is_empty(x, y - 1)
+#             and board.is_empty(x, y - 2)
+#             and board.is_empty(x, y - 2)
+#         ):
+#             valid_moves.append((x, y - 2))
+
+#         return valid_moves

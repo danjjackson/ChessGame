@@ -1,21 +1,9 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
 
-from moves import (
-    Colour,
-    Diagonal,
-    Horizontal,
-    Knight,
-    LongCastle,
-    MoveType,
-    ShortCastle,
-    Vertical,
-)
-
-Position = tuple[int, int]
+from utils import Colour
 
 
 class PieceType(Enum):
@@ -48,67 +36,29 @@ FEN_MAP: dict[str, PieceType] = {
 }
 
 
-FEN_MOVE_MAP: dict[str, dict[str, list[MoveType]]] = {
-    "p": {
-        "regular": [Vertical(limit=2, orientation=Colour.WHITE)],
-        "capture": [Diagonal(limit=1, orientation=Colour.WHITE)],
-    },
-    "r": {"regular": [Vertical(), Horizontal()], "capture": [Vertical(), Horizontal()]},
-    "b": {"regular": [Diagonal()], "capture": [Diagonal()]},
-    "n": {"regular": [Knight()], "capture": [Knight()]},
-    "q": {
-        "regular": [Vertical(), Horizontal(), Diagonal()],
-        "capture": [Vertical(), Horizontal(), Diagonal()],
-    },
-    "k": {
-        "regular": [Vertical(limit=1), Horizontal(limit=1), Diagonal(limit=1)],
-        "capture": [Vertical(limit=1), Horizontal(limit=1), Diagonal(limit=1)],
-        "short_castle": [ShortCastle()],
-        "long_castle": [LongCastle()],
-    },
-    "P": {
-        "regular": [Vertical(limit=2, orientation=Colour.BLACK)],
-        "capture": [Diagonal(limit=1, orientation=Colour.BLACK)],
-    },
-    "R": {"regular": [Vertical(), Horizontal()], "capture": [Vertical(), Horizontal()]},
-    "B": {"regular": [Diagonal()], "capture": [Diagonal()]},
-    "N": {"regular": [Knight()], "capture": [Knight()]},
-    "Q": {
-        "regular": [Vertical(), Horizontal(), Diagonal()],
-        "capture": [Vertical(), Horizontal(), Diagonal()],
-    },
-    "K": {
-        "regular": [Vertical(limit=1), Horizontal(limit=1), Diagonal(limit=1)],
-        "capture": [Vertical(limit=1), Horizontal(limit=1), Diagonal(limit=1)],
-        "short_castle": [ShortCastle()],
-        "long_castle": [LongCastle()],
-    },
-}
-
-
 @dataclass
 class Piece:
-    move_type: dict[str, list[MoveType]] = field(default_factory=dict)
     colour: Colour = Colour.BLANK
     type: PieceType = PieceType.EMPTY
+    orientation: list[Colour] = field(default_factory=list)
+    move_limit: int = 7
+    capture_limit: int = 7
     moves_made: int = 0
     last_moved: int = 0
-
-    def move(self) -> None:
-        self.moves_made += 1
-        if self.type == PieceType.PAWN:
-            for move_type in self.move_type["regular"]:
-                move_type.limit = 1
-
-    def undo(self):
-        self.moves_made -= 1
-        if self.type == PieceType.PAWN and self.moves_made == 0:
-            for move_type in self.move_type["regular"]:
-                move_type.limit = 2
 
     @property
     def has_moved(self) -> bool:
         return self.moves_made > 0
+
+    def move(self) -> None:
+        self.moves_made += 1
+        if self.type == PieceType.PAWN:
+            self.move_limit = 1
+
+    def undo(self):
+        self.moves_made -= 1
+        if self.type == PieceType.PAWN and self.moves_made == 0:
+            self.move_limit = 2
 
     def promote_to(self, piece: PieceType) -> None:
         self.type = piece
@@ -116,7 +66,18 @@ class Piece:
     @staticmethod
     def from_fen(fen: str) -> Piece:
         colour = Colour.WHITE if fen.islower() else Colour.BLACK
-        return Piece(deepcopy(FEN_MOVE_MAP[fen]), colour, type=FEN_MAP[fen.lower()])
+        type = FEN_MAP[fen.lower()]
+        orientation = (
+            [colour] if type == PieceType.PAWN else [Colour.WHITE, Colour.BLACK]
+        )
+        if type == PieceType.PAWN:
+            move_limit = 2
+        elif type == PieceType.KING:
+            move_limit = 1
+        else:
+            move_limit = 7
+        capture_limit = 1 if type == PieceType.PAWN or type == PieceType.KING else 7
+        return Piece(colour, type, orientation, move_limit, capture_limit)
 
     def __str__(self):
         return PIECE_STR[self.type][self.colour.value]

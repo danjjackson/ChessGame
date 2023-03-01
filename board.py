@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from functools import partial
-from typing import Callable
 
-from pieces import Colour, Piece, PieceType
+from moves import MOVEMENT_MAP, is_valid_knight_move
+from pieces import Piece, PieceType
 from square import Square
+from utils import Colour, MoveCategory
 
 Position = tuple[str, str]
 Grid = dict[Position, Square]
@@ -50,7 +50,11 @@ class Board:
             column = 0
         return board
 
+    def get_square(self, file: str, rank: str) -> Square | None:
+        return self.squares.get((file, rank), None)
+
     def place(self, file: str, rank: str, piece: Piece):
+        # print(f"Placing a {piece.colour} {piece.type} on {file}{rank}")
         self.squares[(file, rank)].piece = piece
 
     def piece(self, file: str, rank: str) -> Piece:
@@ -92,25 +96,53 @@ class Board:
 
         return board_repr
 
+    def is_reachable(
+        self,
+        source: Square,
+        destination: Square,
+        move_category: MoveCategory,
+    ) -> bool:
+        if source.piece.type == PieceType.KNIGHT:
+            return is_valid_knight_move(self, source, destination)
 
-# ValidMoveCalculator = Callable[[Board, int, int], list[Position]]
+        temp = source
 
-# MOVE_LISTS: dict[PieceType, list[ValidMoveCalculator]] = {
-#     PieceType.ROOK: [get_valid_horizontal_moves, get_valid_vertical_moves],
-#     PieceType.BISHOP: [get_valid_diagonal_moves],
-#     PieceType.QUEEN: [
-#         get_valid_diagonal_moves,
-#         get_valid_vertical_moves,
-#         get_valid_horizontal_moves,
-#     ],
-#     PieceType.KNIGHT: [get_valid_knight_moves],
-#     PieceType.KING: [
-#         partial(get_valid_diagonal_moves, limit=1),
-#         partial(get_valid_vertical_moves, limit=1),
-#         partial(get_valid_horizontal_moves, limit=1),
-#     ],
-#     PieceType.PAWN: [partial(get_valid_vertical_moves, limit=2)],
-# }
+        neighbour_funcs = MOVEMENT_MAP[source.piece.type][move_category]
+
+        for neighbour_func in neighbour_funcs:
+            for orientation in source.piece.orientation:
+                move_distance = 0
+                movement_limit = (
+                    source.piece.move_limit
+                    if move_category == MoveCategory.REGULAR
+                    else source.piece.capture_limit
+                )
+                while move_distance < movement_limit:
+                    move_distance += 1
+                    neighbour = neighbour_func(self, temp, orientation)
+                    if neighbour is not None:
+                        if neighbour == destination:
+                            return True
+                        elif neighbour.is_empty:
+                            temp = neighbour
+                            continue
+                        else:
+                            break
+
+        return False
+
+    def king_is_in_check(self, colour: Colour) -> bool:
+        king_square = self.find_king(colour)
+
+        is_in_check = False
+
+        for square in self.squares.values():
+            if square.piece.colour != colour and square.piece.type != PieceType.EMPTY:
+                if self.is_reachable(square, king_square, MoveCategory.CAPTURE):
+                    is_in_check = True
+
+        return is_in_check
+
 
 if __name__ == "__main__":
     board = Board.from_fen()
