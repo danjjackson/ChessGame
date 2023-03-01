@@ -45,8 +45,8 @@ class Board:
                     str(ind_rank + 1),
                     Piece.from_fen(char),
                 )
-            if column + ind_file != 7:
-                raise ValueError("Invalid FEN string")
+            # if column + ind_file != 7:
+            #     raise ValueError("Invalid FEN string")
             column = 0
         return board
 
