@@ -1,4 +1,5 @@
 from board import Board
+from move import NotationError
 from pieces import Colour
 from turn import IllegalMoveError, Turn
 
@@ -27,36 +28,44 @@ class Game:
         turn = Turn(self.board, self.player)
         while True:
             print(f"{turn.player} player: Please enter a move!")
-            moves = turn.enter_move(turn.player)
+            try:
+                moves = turn.enter_move(turn.player)
+            except NotationError as e:
+                print(e.message)
+                continue
             # print(move.move_category.value)
             for move in moves:
                 try:
                     possible_squares = turn.find_possible_source_squares(move)
-                except IllegalMoveError:
-                    print("There are no pieces of that colour on the board")
+                except IllegalMoveError as e:
+                    print(e.message)
                     break
                 # print(possible_squares)
                 try:
                     source_square = turn.find_valid_source_square(
                         possible_squares, move.move_category, move.dest
                     )
-                    print(source_square.piece)
-                except IllegalMoveError:
-                    print("Invalid move")
+                    # print(source_square.piece)
+                except IllegalMoveError as e:
+                    print(e.message)
+                    break
+                except NotationError as e:
+                    print(e.message)
                     break
 
                 try:
                     turn.complete_move(source_square, move.dest, move.move_category)
-                except IllegalMoveError:
-                    print("You cannot castle out of check!")
+                except IllegalMoveError as e:
+                    print(e.message)
                     break
 
-            self.player = next(self.colour_alternator)
+            else:
+                self.player = next(self.colour_alternator)
 
-            self.board.orientation = self.player
-            print(self.board)
+                self.board.orientation = self.player
+                print(self.board)
 
-            turn = Turn(self.board, self.player)
+                turn = Turn(self.board, self.player)
 
 
 if __name__ == "__main__":

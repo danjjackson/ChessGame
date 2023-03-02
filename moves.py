@@ -1,58 +1,72 @@
-from dataclasses import dataclass
 from typing import Callable, Protocol
 
+from exceptions import IllegalMoveError, NotationError, OutOfBoundsError
 from pieces import PieceType
 from square import Square
 from utils import Colour, MoveCategory
 
 
 class Board(Protocol):
-    def get_square(self, file: str, rank: str) -> Square | None:
+    def get_square(self, file: str, rank: str) -> Square:
         """Returns the piece at position (x, y)."""
-        return None
+        return Square()
 
 
-def get_vertical_neighbour(
-    board: Board, square: Square, orientation: Colour
-) -> Square | None:
-    return (
-        board.get_square(square.file, chr(ord(square.rank) + 1))
-        if orientation == Colour.WHITE
-        else board.get_square(square.file, chr(ord(square.rank) - 1))
-    )
+def get_vertical_neighbour(board: Board, square: Square, orientation: Colour) -> Square:
+    try:
+        square = (
+            board.get_square(square.file, chr(ord(square.rank) + 1))
+            if orientation == Colour.WHITE
+            else board.get_square(square.file, chr(ord(square.rank) - 1))
+        )
+    except OutOfBoundsError as e:
+        raise e
+    return square
 
 
 def get_horizontal_neighbour(
     board: Board, square: Square, orientation: Colour
-) -> Square | None:
-    return (
-        board.get_square(chr(ord(square.file) + 1), square.rank)
-        if orientation == Colour.WHITE
-        else board.get_square(chr(ord(square.file) - 1), square.rank)
-    )
+) -> Square:
+    try:
+        square = (
+            board.get_square(chr(ord(square.file) + 1), square.rank)
+            if orientation == Colour.WHITE
+            else board.get_square(chr(ord(square.file) - 1), square.rank)
+        )
+    except KeyError:
+        raise KeyError
+    return square
 
 
 def get_positive_diagonal_neighbour(
     board: Board, square: Square, orientation: Colour
-) -> Square | None:
-    return (
-        board.get_square(chr(ord(square.file) + 1), chr(ord(square.rank) + 1))
-        if orientation == Colour.WHITE
-        else board.get_square(chr(ord(square.file) - 1), chr(ord(square.rank) - 1))
-    )
+) -> Square:
+    try:
+        square = (
+            board.get_square(chr(ord(square.file) + 1), chr(ord(square.rank) + 1))
+            if orientation == Colour.WHITE
+            else board.get_square(chr(ord(square.file) - 1), chr(ord(square.rank) - 1))
+        )
+    except OutOfBoundsError as e:
+        raise e
+    return square
 
 
 def get_negative_diagonal_neighbour(
     board: Board, square: Square, orientation: Colour
-) -> Square | None:
-    return (
-        board.get_square(chr(ord(square.file) - 1), chr(ord(square.rank) + 1))
-        if orientation == Colour.WHITE
-        else board.get_square(chr(ord(square.file) + 1), chr(ord(square.rank) - 1))
-    )
+) -> Square:
+    try:
+        square = (
+            board.get_square(chr(ord(square.file) - 1), chr(ord(square.rank) + 1))
+            if orientation == Colour.WHITE
+            else board.get_square(chr(ord(square.file) + 1), chr(ord(square.rank) - 1))
+        )
+    except OutOfBoundsError as e:
+        raise e
+    return square
 
 
-NeighbourCalculator = Callable[[Board, Square, Colour], Square | None]
+NeighbourCalculator = Callable[[Board, Square, Colour], Square]
 MOVEMENT_MAP: dict[PieceType, dict[MoveCategory, list[NeighbourCalculator]]] = {
     PieceType.PAWN: {
         MoveCategory.REGULAR: [get_vertical_neighbour],
@@ -106,38 +120,58 @@ MOVEMENT_MAP: dict[PieceType, dict[MoveCategory, list[NeighbourCalculator]]] = {
 }
 
 
-def is_valid_knight_move(board: Board, source: Square, target: Square) -> bool:
-    squares = [
-        board.get_square(chr(ord(source.file) + 1), chr(ord(source.rank) + 2)),
-        board.get_square(chr(ord(source.file) + 1), chr(ord(source.rank) - 2)),
-        board.get_square(chr(ord(source.file) - 1), chr(ord(source.rank) + 2)),
-        board.get_square(chr(ord(source.file) - 1), chr(ord(source.rank) - 2)),
-        board.get_square(chr(ord(source.file) + 2), chr(ord(source.rank) + 1)),
-        board.get_square(chr(ord(source.file) + 2), chr(ord(source.rank) - 1)),
-        board.get_square(chr(ord(source.file) - 2), chr(ord(source.rank) + 1)),
-        board.get_square(chr(ord(source.file) - 2), chr(ord(source.rank) - 1)),
+def is_valid_knight_move(
+    board: Board, source: Square, target: Square, move_category: MoveCategory
+) -> bool:
+    coordinates = [
+        (chr(ord(source.file) + 1), chr(ord(source.rank) + 2)),
+        (chr(ord(source.file) + 1), chr(ord(source.rank) - 2)),
+        (chr(ord(source.file) - 1), chr(ord(source.rank) + 2)),
+        (chr(ord(source.file) - 1), chr(ord(source.rank) - 2)),
+        (chr(ord(source.file) + 2), chr(ord(source.rank) + 1)),
+        (chr(ord(source.file) + 2), chr(ord(source.rank) - 1)),
+        (chr(ord(source.file) - 2), chr(ord(source.rank) + 1)),
+        (chr(ord(source.file) - 2), chr(ord(source.rank) - 1)),
     ]
 
-    valid_squares: list[Square] = []
+    for coordinate in coordinates:
+        try:
+            square = board.get_square(*coordinate)
+            if square == target:
+                if square.piece.colour == source.piece.colour:
+                    raise IllegalMoveError(
+                        "That square is already occupied by one of your pieces!"
+                    )
+                if move_category == MoveCategory.REGULAR:
+                    if square.is_empty:
+                        return True
+                    else:
+                        raise NotationError(
+                            "The square is occupied by your opponents piece. Do you want to capture it?"
+                        )
+                if move_category == MoveCategory.CAPTURE:
+                    if square.is_empty:
+                        raise NotationError(
+                            "There isn't a piece on that square to capture!"
+                        )
+                    else:
+                        return True
+        except OutOfBoundsError:
+            continue
 
-    for square in squares:
-        if square is not None:
-            if square.is_empty or square.piece.colour != source.piece.colour:
-                valid_squares.append(square)
-
-    return target in valid_squares
+    return False
 
 
 def is_short_castle_valid(board: Board, source: Square) -> bool:
+    if source.piece.has_moved:
+        return False
+
     bishop_square = board.get_square(chr(ord(source.file) + 1), source.rank)
     knight_square = board.get_square(chr(ord(source.file) + 2), source.rank)
     rook_square = board.get_square(chr(ord(source.file) + 3), source.rank)
 
-    print(rook_square)
-
     if (
-        not source.piece.has_moved
-        and not rook_square.piece.has_moved
+        not rook_square.piece.has_moved
         and bishop_square.is_empty
         and knight_square.is_empty
     ):
@@ -147,16 +181,22 @@ def is_short_castle_valid(board: Board, source: Square) -> bool:
         return False
 
 
-# class LongCastle(MoveType):
-#     def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
-#         valid_moves = []
-#         if (
-#             not board.piece(x, y).has_moved
-#             and not board.piece(x, y - 4).has_moved
-#             and board.is_empty(x, y - 1)
-#             and board.is_empty(x, y - 2)
-#             and board.is_empty(x, y - 2)
-#         ):
-#             valid_moves.append((x, y - 2))
+def is_long_castle_valid(board: Board, source: Square) -> bool:
+    if source.piece.has_moved:
+        return False
 
-#         return valid_moves
+    queen_square = board.get_square(chr(ord(source.file) - 1), source.rank)
+    bishop_square = board.get_square(chr(ord(source.file) - 2), source.rank)
+    knight_square = board.get_square(chr(ord(source.file) - 3), source.rank)
+    rook_square = board.get_square(chr(ord(source.file) - 4), source.rank)
+
+    if (
+        not rook_square.piece.has_moved
+        and queen_square.is_empty
+        and bishop_square.is_empty
+        and knight_square.is_empty
+    ):
+        return True
+
+    else:
+        return False

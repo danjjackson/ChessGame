@@ -1,19 +1,8 @@
 from board import Board
+from exceptions import IllegalMoveError, NotationError
 from move import Move, parse_move
-from pieces import PieceType
 from square import Square
 from utils import Colour, MoveCategory
-
-# from utils import get_moves, king_is_in_check
-
-
-class IllegalMoveError(Exception):
-    def __init__(self, message):
-        self.message = message
-        super().__init__(message)
-
-    def __str__(self):
-        return self.message
 
 
 class Turn:
@@ -40,16 +29,23 @@ class Turn:
     def find_valid_source_square(
         self, possible_squares: list[Square], move_category: MoveCategory, destination
     ) -> Square:
-        valid_squares: list[Square] = [
-            source
-            for source in possible_squares
-            if self.board.is_reachable(source, destination, move_category)
-        ]
+        valid_squares: list[Square] = []
+
+        for source in possible_squares:
+            try:
+                if self.board.is_reachable(source, destination, move_category):
+                    valid_squares.append(source)
+            except IllegalMoveError as e:
+                raise e
+            except NotationError as e:
+                raise e
 
         if len(valid_squares) == 0:
-            raise IllegalMoveError("Invalid move")
+            raise IllegalMoveError("That is not a legal move")
         elif len(valid_squares) > 1:
-            raise ValueError("Ambiguous move")
+            raise IllegalMoveError(
+                "There is more than one possible option for that move"
+            )
         else:
             return valid_squares[0]
 

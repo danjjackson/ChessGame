@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from exceptions import IllegalMoveError, NotationError, OutOfBoundsError
 from moves import MOVEMENT_MAP, is_short_castle_valid, is_valid_knight_move
 from pieces import Piece, PieceType
 from square import Square
@@ -50,8 +51,14 @@ class Board:
             column = 0
         return board
 
-    def get_square(self, file: str, rank: str) -> Square | None:
-        return self.squares.get((file, rank), None)
+    def get_square(self, file: str, rank: str) -> Square:
+        try:
+            square = self.squares[(file, rank)]
+        except KeyError:
+            raise OutOfBoundsError(
+                f"The square {file}{rank} does not exist on the chess board"
+            )
+        return square
 
     def place(self, file: str, rank: str, piece: Piece):
         # print(f"Placing a {piece.colour} {piece.type} on {file}{rank}")
@@ -113,7 +120,7 @@ class Board:
         move_category: MoveCategory,
     ) -> bool:
         if source.piece.type == PieceType.KNIGHT:
-            return is_valid_knight_move(self, source, destination)
+            return is_valid_knight_move(self, source, destination, move_category)
 
         if move_category == MoveCategory.SHORT_CASTLE:
             if source.piece.type == PieceType.KING:
@@ -137,15 +144,34 @@ class Board:
                 )
                 while move_distance < movement_limit:
                     move_distance += 1
-                    neighbour = neighbour_func(self, temp, orientation)
-                    if neighbour is not None:
-                        if neighbour == destination:
-                            return True
-                        elif neighbour.is_empty:
-                            temp = neighbour
-                            continue
-                        else:
-                            break
+                    try:
+                        neighbour = neighbour_func(self, temp, orientation)
+                    except OutOfBoundsError:
+                        break
+                    if neighbour == destination:
+                        if neighbour.piece.colour == source.piece.colour:
+                            raise IllegalMoveError(
+                                "That square is already occupied by one of your pieces!"
+                            )
+                        if move_category == MoveCategory.REGULAR:
+                            if neighbour.is_empty:
+                                return True
+                            else:
+                                raise NotationError(
+                                    "There is an opponents piece on that square! Do you want to capture it?"
+                                )
+                        if move_category == MoveCategory.CAPTURE:
+                            if neighbour.is_empty:
+                                raise NotationError(
+                                    "You have specified a capture but there isn't a piece on the target square"
+                                )
+                            else:
+                                return True
+                    elif neighbour.is_empty:
+                        temp = neighbour
+                        continue
+                    else:
+                        break
 
         return False
 

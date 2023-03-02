@@ -2,87 +2,53 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pydantic
+
 from board import Board
+from exceptions import NotationError
 from pieces import FEN_MAP, PieceType
 from square import Square
 from utils import Colour, MoveCategory
 
-Position = tuple[int, int]
 notation_map = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
 
 
-checks = ["+", "#"]
-possible_moves = [
-    "0-0-0",
-    "0-0",
-    "Nf3",
-    "Nxf3",
-    "Nbc3",
-    "Nbxc3",
-    "e4",
-    "exd5",
-    "e8=Q",
-    "exf8=Q",
-]
-
-
-# check if the last symbol is a + or a #, then remove
-# Check that the string is under 5 characters
-# Deal with castling
-# Find piece type
-def validation(move):
-    if move == "0-0" or move == "0-0-0":
-        validate_castling()
-
-    elif move[0] in ["N", "B", "R", "Q", "K"]:
-        validate_piece_move(move)
-
-    elif move[0] in ["a", "b", "c", "d", "e", "f", "g", "h"]:
-        validate_pawn_move()
-
-    else:
-        raise IllegalMoveError
-
-
-def validate_piece_move(move):
-    if len(move) not in [3, 4, 5]:
-        raise IllegalMoveError
-
-    cols = ["a", "b", "c", "d", "e", "f", "g", "h"]
-
-    selected_piece_type = FEN_MAP[move[0].lower()]
-
-    if move[-3] == "x":
-        move_category = MoveCategory.CAPTURE
-
-    dest = (int(move[-1]) - 1, notation_map[move[-2]])
-
-    if len(move) > 3 and (
-        (move[1] in cols and move[2] in cols) or (move[1] in cols and move[3] in cols)
-    ):
-        source = move[1]
-
-    return
-
-
-# class MoveValidator(pydantic.BaseModel):
-
-
-@dataclass
-class Move:
-    piece_type: PieceType
-    dest: Square
-    move_category: MoveCategory
+class Move(pydantic.BaseModel):
+    piece_type: PieceType = PieceType.EMPTY
+    dest: Square = Square()
+    move_category: MoveCategory = MoveCategory.REGULAR
     src_file: str = "abcdefgh"
     src_rank: str = "12345678"
+    promote_to: PieceType = PieceType.EMPTY
+
+    @pydantic.validator("src_file")
+    @classmethod
+    def src_file_valid(cls, value):
+        if value not in "abcdefgh":
+            raise NotationError(value=value, message="invalid file")
+        return value
+
+    @pydantic.validator("src_rank")
+    @classmethod
+    def src_rank_valid(cls, value):
+        if value not in "12345678":
+            raise NotationError(message="invalid rank")
+        return value
+
+    def set_piece(self, piece_str: str) -> None:
+        try:
+            self.piece_type = FEN_MAP[piece_str.lower()]
+        except KeyError:
+            raise NotationError(message="That is not a valid symbol for a piece")
+
+    class Config:
+        validate_assignment = True
 
 
 def parse_move(board: Board, player: Colour) -> list[Move]:
     move = input()
 
-    if move[1] == "x":
-        move_category = MoveCategory.CAPTURE
-    elif move == "0-0":
+    if move == "0-0":
         return [
             Move(
                 piece_type=PieceType.KING,
@@ -101,7 +67,7 @@ def parse_move(board: Board, player: Colour) -> list[Move]:
                 src_rank="1" if player == Colour.WHITE else "8",
             ),
         ]
-    elif move == "0-0-0":
+    if move == "0-0-0":
         return [
             Move(
                 piece_type=PieceType.KING,
@@ -120,16 +86,45 @@ def parse_move(board: Board, player: Colour) -> list[Move]:
                 src_rank="1" if player == Colour.WHITE else "8",
             ),
         ]
+    if len(move) < 7:
+        test_move = Move()
+        x = move.find("x")
+        if x == 1 or x == 2:
+            move_category = MoveCategory.CAPTURE
+        elif x == -1:
+            move_category = MoveCategory.REGULAR
+        else:
+            raise NotationError(
+                value="x", message="That is an invalid location for 'x'"
+            )
+
+        if move[0].isupper():
+            test_move.set_piece(move[0])
+            if move[1].isnumeric():
+                test_move.src_rank = move[1]
+            elif move_category == MoveCategory.REGULAR and not move[2].isnumeric():
+                test_move.src_file = move[1]
+            elif move_category == MoveCategory.CAPTURE and not move[3].isnumeric():
+                test_move.src_file = move[1]
+
+        else:
+            test_move.set_piece("p")
+            if move_category == MoveCategory.CAPTURE:
+                test_move.src_file = move[0]
+
+        if "=" not in move:
+            try:
+                test_move.dest = board.get_square(move[-2], move[-1])
+            except KeyError:
+                raise NotationError(message="That square does not exist.")
+        else:
+            try:
+                test_move.dest = board.get_square(move[-4], move[-3])
+            except KeyError:
+                raise NotationError(message="That square does not exist.")
+
+            test_move.promote_to = FEN_MAP[move[-1]]
     else:
-        move_category = MoveCategory.REGULAR
+        raise NotationError(message="That is an invalid move!")
 
-    if move[0].isupper():
-        selected_piece_type = FEN_MAP[move[0].lower()]
-    else:
-        selected_piece_type = FEN_MAP["p"]
-
-    dest = board.squares[(move[-2], move[-1])]
-
-    return [
-        Move(piece_type=selected_piece_type, dest=dest, move_category=move_category)
-    ]
+    return [test_move]

@@ -7,8 +7,8 @@ from pieces import Piece, PieceType
 
 @dataclass
 class Square:
-    file: str
-    rank: str
+    file: str = ""
+    rank: str = ""
     piece: Piece = field(default_factory=Piece)
 
     @property
