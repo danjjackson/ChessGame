@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import pydantic
 
 from board import Board
@@ -23,14 +21,14 @@ class Move(pydantic.BaseModel):
 
     @pydantic.validator("src_file")
     @classmethod
-    def src_file_valid(cls, value):
+    def src_file_valid(cls, value: str) -> str:
         if value not in "abcdefgh":
-            raise NotationError(value=value, message="invalid file")
+            raise NotationError(message="invalid file")
         return value
 
     @pydantic.validator("src_rank")
     @classmethod
-    def src_rank_valid(cls, value):
+    def src_rank_valid(cls, value: str) -> str:
         if value not in "12345678":
             raise NotationError(message="invalid rank")
         return value
@@ -94,9 +92,7 @@ def parse_move(board: Board, player: Colour) -> list[Move]:
         elif x == -1:
             test_move.move_category = MoveCategory.REGULAR
         else:
-            raise NotationError(
-                value="x", message="That is an invalid location for 'x'"
-            )
+            raise NotationError(message="That is an invalid location for 'x'")
 
         if move[0].isupper():
             test_move.set_piece(move[0])
