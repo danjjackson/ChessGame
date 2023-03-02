@@ -33,19 +33,16 @@ class Game:
             except NotationError as e:
                 print(e.message)
                 continue
-            # print(move.move_category.value)
             for move in moves:
                 try:
                     possible_squares = turn.find_possible_source_squares(move)
                 except IllegalMoveError as e:
                     print(e.message)
                     break
-                # print(possible_squares)
                 try:
                     source_square = turn.find_valid_source_square(
                         possible_squares, move.move_category, move.dest
                     )
-                    # print(source_square.piece)
                 except IllegalMoveError as e:
                     print(e.message)
                     break

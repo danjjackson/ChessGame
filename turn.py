@@ -27,18 +27,16 @@ class Turn:
         return possible_squares
 
     def find_valid_source_square(
-        self, possible_squares: list[Square], move_category: MoveCategory, destination
+        self,
+        possible_squares: list[Square],
+        move_category: MoveCategory,
+        destination: Square,
     ) -> Square:
         valid_squares: list[Square] = []
 
         for source in possible_squares:
-            try:
-                if self.board.is_reachable(source, destination, move_category):
-                    valid_squares.append(source)
-            except IllegalMoveError as e:
-                raise e
-            except NotationError as e:
-                raise e
+            if self.board.is_reachable(source, destination, move_category):
+                valid_squares.append(source)
 
         if len(valid_squares) == 0:
             raise IllegalMoveError("That is not a legal move")

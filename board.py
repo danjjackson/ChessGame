@@ -130,11 +130,10 @@ class Board:
             else:
                 return False
 
-        temp = source
-
         neighbour_funcs = MOVEMENT_MAP[source.piece.type][move_category]
 
         for neighbour_func in neighbour_funcs:
+            temp = source
             for orientation in source.piece.orientation:
                 move_distance = 0
                 movement_limit = (

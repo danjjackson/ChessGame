@@ -90,9 +90,9 @@ def parse_move(board: Board, player: Colour) -> list[Move]:
         test_move = Move()
         x = move.find("x")
         if x == 1 or x == 2:
-            move_category = MoveCategory.CAPTURE
+            test_move.move_category = MoveCategory.CAPTURE
         elif x == -1:
-            move_category = MoveCategory.REGULAR
+            test_move.move_category = MoveCategory.REGULAR
         else:
             raise NotationError(
                 value="x", message="That is an invalid location for 'x'"
@@ -102,14 +102,20 @@ def parse_move(board: Board, player: Colour) -> list[Move]:
             test_move.set_piece(move[0])
             if move[1].isnumeric():
                 test_move.src_rank = move[1]
-            elif move_category == MoveCategory.REGULAR and not move[2].isnumeric():
+            elif (
+                test_move.move_category == MoveCategory.REGULAR
+                and not move[2].isnumeric()
+            ):
                 test_move.src_file = move[1]
-            elif move_category == MoveCategory.CAPTURE and not move[3].isnumeric():
+            elif (
+                test_move.move_category == MoveCategory.CAPTURE
+                and not move[3].isnumeric()
+            ):
                 test_move.src_file = move[1]
 
         else:
             test_move.set_piece("p")
-            if move_category == MoveCategory.CAPTURE:
+            if test_move.move_category == MoveCategory.CAPTURE:
                 test_move.src_file = move[0]
 
         if "=" not in move:
