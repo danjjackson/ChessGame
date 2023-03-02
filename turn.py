@@ -1,5 +1,5 @@
 from board import Board
-from move import Move
+from move import Move, parse_move
 from pieces import PieceType
 from square import Square
 from utils import Colour, MoveCategory
@@ -21,27 +21,30 @@ class Turn:
         self.player = player
         self.board = board
 
-    def enter_move(self, player) -> Move:
-        return Move.parse_move(self.board, player)
+    def enter_move(self, player) -> list[Move]:
+        return parse_move(self.board, player)
 
-    def find_squares_with(self, selected_piece_type: PieceType) -> list[Square]:
-        possible_squares = self.board.find_pieces(selected_piece_type, self.player)
+    def find_possible_source_squares(self, move: Move) -> list[Square]:
+        possible_squares = self.board.find_squares(
+            move.piece_type,
+            self.player,
+            move.src_file,
+            move.src_rank,
+        )
         if not len(possible_squares):
             raise IllegalMoveError(
-                f"There is no {self.player} {selected_piece_type} on the board!"
+                f"There is no {self.player} {move.piece_type} on the board!"
             )
         return possible_squares
 
-    def find_valid_square(
+    def find_valid_source_square(
         self, possible_squares: list[Square], move_category: MoveCategory, destination
     ) -> Square:
-        valid_squares: list[Square] = []
-
-        for source in possible_squares:
-            if self.board.is_reachable(source, destination, move_category):
-                valid_squares.append(source)
-
-        print(valid_squares)
+        valid_squares: list[Square] = [
+            source
+            for source in possible_squares
+            if self.board.is_reachable(source, destination, move_category)
+        ]
 
         if len(valid_squares) == 0:
             raise IllegalMoveError("Invalid move")
@@ -57,21 +60,8 @@ class Turn:
             move_category == MoveCategory.SHORT_CASTLE
             or move_category == MoveCategory.LONG_CASTLE
         ):
-            # if king_is_in_check(self.board, self.player):
-            #     raise IllegalMoveError("You cannot castle out of check!")
-
-            if move_category == MoveCategory.SHORT_CASTLE:
-                rook = self.board.piece(piece.x, piece.y + 3)
-                rook.move_to(piece.x, piece.y + 1)
-                self.board.place(rook)
-                self.board.empty(piece.x, piece.y + 3)
-                self.board.place(rook)
-
-            else:
-                rook = self.board.piece(piece.x, piece.y - 4)
-                rook.move_to(piece.x, piece.y - 1)
-                self.board.place(rook)
-                self.board.empty(piece.x, piece.y - 4)
+            if self.board.king_is_in_check(self.player):
+                raise IllegalMoveError("You cannot castle out of check!")
 
         source.move_piece(destination)
 

@@ -70,44 +70,66 @@ def validate_piece_move(move):
 
 @dataclass
 class Move:
-    piece: PieceType
+    piece_type: PieceType
     dest: Square
     move_category: MoveCategory
-    src_rank: str = ""
-    src_file: str = ""
+    src_file: str = "abcdefgh"
+    src_rank: str = "12345678"
 
-    @staticmethod
-    def parse_move(board: Board, player: Colour) -> Move:
-        move = input()
 
-        # self.validate_move(move)
+def parse_move(board: Board, player: Colour) -> list[Move]:
+    move = input()
 
-        if move[1] == "x":
-            move_category = MoveCategory.CAPTURE
-        elif move == "0-0":
-            return Move(
-                piece=PieceType.KING,
+    if move[1] == "x":
+        move_category = MoveCategory.CAPTURE
+    elif move == "0-0":
+        return [
+            Move(
+                piece_type=PieceType.KING,
                 dest=board.squares[("g", "1")]
                 if player == Colour.WHITE
                 else board.squares[("g", "8")],
                 move_category=MoveCategory.SHORT_CASTLE,
-            )
-        elif move == "0-0-0":
-            return Move(
-                piece=PieceType.KING,
+            ),
+            Move(
+                piece_type=PieceType.ROOK,
+                dest=board.squares[("f", "1")]
+                if player == Colour.WHITE
+                else board.squares[("f", "8")],
+                move_category=MoveCategory.SHORT_CASTLE,
+                src_file="h",
+                src_rank="1" if player == Colour.WHITE else "8",
+            ),
+        ]
+    elif move == "0-0-0":
+        return [
+            Move(
+                piece_type=PieceType.KING,
                 dest=board.squares[("c", "1")]
                 if player == Colour.WHITE
                 else board.squares[("c", "8")],
-                move_category=MoveCategory.LONG_CASTLE,
-            )
-        else:
-            move_category = MoveCategory.REGULAR
+                move_category=MoveCategory.SHORT_CASTLE,
+            ),
+            Move(
+                piece_type=PieceType.ROOK,
+                dest=board.squares[("d", "1")]
+                if player == Colour.WHITE
+                else board.squares[("d", "8")],
+                move_category=MoveCategory.SHORT_CASTLE,
+                src_file="a",
+                src_rank="1" if player == Colour.WHITE else "8",
+            ),
+        ]
+    else:
+        move_category = MoveCategory.REGULAR
 
-        if move[0].isupper():
-            selected_piece_type = FEN_MAP[move[0].lower()]
-        else:
-            selected_piece_type = FEN_MAP["p"]
+    if move[0].isupper():
+        selected_piece_type = FEN_MAP[move[0].lower()]
+    else:
+        selected_piece_type = FEN_MAP["p"]
 
-        dest = board.squares[(move[-2], move[-1])]
+    dest = board.squares[(move[-2], move[-1])]
 
-        return Move(piece=selected_piece_type, dest=dest, move_category=move_category)
+    return [
+        Move(piece_type=selected_piece_type, dest=dest, move_category=move_category)
+    ]

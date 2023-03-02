@@ -15,7 +15,7 @@ def alternate_players(start: Colour = Colour.WHITE):
 
 
 class Game:
-    def __init__(self, fen_string: str = "rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R"):
+    def __init__(self, fen_string: str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"):
         self.colour_alternator = alternate_players(Colour.WHITE)
         self.player = next(self.colour_alternator)
         self.board = Board.from_fen(fen_string, self.player)
@@ -27,29 +27,29 @@ class Game:
         turn = Turn(self.board, self.player)
         while True:
             print(f"{turn.player} player: Please enter a move!")
-            move = turn.enter_move(turn.player)
-            print(move.move_category.value)
+            moves = turn.enter_move(turn.player)
+            # print(move.move_category.value)
+            for move in moves:
+                try:
+                    possible_squares = turn.find_possible_source_squares(move)
+                except IllegalMoveError:
+                    print("There are no pieces of that colour on the board")
+                    break
+                # print(possible_squares)
+                try:
+                    source_square = turn.find_valid_source_square(
+                        possible_squares, move.move_category, move.dest
+                    )
+                    print(source_square.piece)
+                except IllegalMoveError:
+                    print("Invalid move")
+                    break
 
-            try:
-                possible_squares = turn.find_squares_with(move.piece)
-            except IllegalMoveError:
-                print("There are no pieces of that colour on the board")
-                continue
-            # print(possible_squares)
-            try:
-                source_square = turn.find_valid_square(
-                    possible_squares, move.move_category, move.dest
-                )
-                print(source_square.piece)
-            except IllegalMoveError:
-                print("Invalid move")
-                continue
-
-            try:
-                turn.complete_move(source_square, move.dest, move.move_category)
-            except IllegalMoveError:
-                print("You cannot castle out of check!")
-                continue
+                try:
+                    turn.complete_move(source_square, move.dest, move.move_category)
+                except IllegalMoveError:
+                    print("You cannot castle out of check!")
+                    break
 
             self.player = next(self.colour_alternator)
 

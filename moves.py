@@ -128,20 +128,23 @@ def is_valid_knight_move(board: Board, source: Square, target: Square) -> bool:
     return target in valid_squares
 
 
-# class ShortCastle(MoveType):
-#     def get_valid_moves(self, board: Board, x: int, y: int) -> list[Position]:
-#         valid_moves = []
+def is_short_castle_valid(board: Board, source: Square) -> bool:
+    bishop_square = board.get_square(chr(ord(source.file) + 1), source.rank)
+    knight_square = board.get_square(chr(ord(source.file) + 2), source.rank)
+    rook_square = board.get_square(chr(ord(source.file) + 3), source.rank)
 
-#         # print(board.piece(x, y).has_moved)
-#         if (
-#             not board.piece(x, y).has_moved
-#             and not board.piece(x, y + 3).has_moved
-#             and board.is_empty(x, y + 1)
-#             and board.is_empty(x, y + 1)
-#         ):
-#             valid_moves.append((x, y + 2))
+    print(rook_square)
 
-#         return valid_moves
+    if (
+        not source.piece.has_moved
+        and not rook_square.piece.has_moved
+        and bishop_square.is_empty
+        and knight_square.is_empty
+    ):
+        return True
+
+    else:
+        return False
 
 
 # class LongCastle(MoveType):

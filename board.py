@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from moves import MOVEMENT_MAP, is_valid_knight_move
+from moves import MOVEMENT_MAP, is_short_castle_valid, is_valid_knight_move
 from pieces import Piece, PieceType
 from square import Square
 from utils import Colour, MoveCategory
@@ -67,15 +67,25 @@ class Board:
         return self.squares[(file, rank)].is_empty
 
     def find_king(self, colour: Colour) -> Square:
-        return self.find_pieces(PieceType.KING, colour)[0]
+        return self.find_squares(PieceType.KING, colour)[0]
 
-    def find_pieces(self, piece_type: PieceType, colour: Colour) -> list[Square]:
-        squares = []
-        for square in self.squares.values():
-            if square.piece.type == piece_type and square.piece.colour == colour:
-                squares.append(square)
-
-        return squares
+    def find_squares(
+        self,
+        piece_type: PieceType,
+        colour: Colour,
+        possible_file: str = "abcdefgh",
+        possible_rank: str = "12345678",
+    ) -> list[Square]:
+        return [
+            square
+            for square in self.squares.values()
+            if (
+                square.piece.type == piece_type
+                and square.piece.colour == colour
+                and square.file in possible_file
+                and square.rank in possible_rank
+            )
+        ]
 
     def __str__(self):
         board_repr = ""
@@ -104,6 +114,14 @@ class Board:
     ) -> bool:
         if source.piece.type == PieceType.KNIGHT:
             return is_valid_knight_move(self, source, destination)
+
+        if move_category == MoveCategory.SHORT_CASTLE:
+            if source.piece.type == PieceType.KING:
+                return is_short_castle_valid(self, source)
+            elif source.piece.type == PieceType.ROOK:
+                return True
+            else:
+                return False
 
         temp = source
 
