@@ -1,8 +1,8 @@
-from board import Board
-from exceptions import IllegalMoveError
-from move import Move, parse_move
-from square import Square
-from utils import Colour, MoveCategory
+from chess.board import Board
+from chess.exceptions import IllegalMoveError
+from chess.move import Move, parse_move
+from chess.square import Square
+from chess.utils import Colour, MoveCategory
 
 
 class Turn:

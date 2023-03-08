@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from pieces import Piece, PieceType
+from chess.pieces import Piece, PieceType
 
 
 @dataclass

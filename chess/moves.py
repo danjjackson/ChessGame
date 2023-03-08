@@ -1,9 +1,9 @@
 from typing import Callable, Protocol
 
-from exceptions import IllegalMoveError, NotationError, OutOfBoundsError
-from pieces import PieceType
-from square import Square
-from utils import Colour, MoveCategory
+from chess.exceptions import IllegalMoveError, NotationError, OutOfBoundsError
+from chess.pieces import PieceType
+from chess.square import Square
+from chess.utils import Colour, MoveCategory
 
 
 class Board(Protocol):

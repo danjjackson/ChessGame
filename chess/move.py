@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pydantic
 
-from board import Board
-from exceptions import NotationError
-from pieces import FEN_MAP, PieceType
-from square import Square
-from utils import Colour, MoveCategory
+from chess.board import Board
+from chess.exceptions import NotationError
+from chess.pieces import FEN_MAP, PieceType
+from chess.square import Square
+from chess.utils import Colour, MoveCategory
 
 notation_map = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
 

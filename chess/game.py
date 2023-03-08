@@ -1,7 +1,7 @@
-from board import Board
-from move import NotationError
-from pieces import Colour
-from turn import IllegalMoveError, Turn
+from chess.board import Board
+from chess.move import NotationError
+from chess.pieces import Colour
+from chess.turn import IllegalMoveError, Turn
 
 
 def alternate_players(start: Colour = Colour.WHITE):
@@ -63,7 +63,3 @@ class Game:
                 print(self.board)
 
                 turn = Turn(self.board, self.player)
-
-
-if __name__ == "__main__":
-    game = Game()

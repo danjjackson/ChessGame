@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from exceptions import IllegalMoveError, NotationError, OutOfBoundsError
-from moves import MOVEMENT_MAP, is_short_castle_valid, is_valid_knight_move
-from pieces import Piece, PieceType
-from square import Square
-from utils import Colour, MoveCategory
+from chess.exceptions import IllegalMoveError, NotationError, OutOfBoundsError
+from chess.moves import MOVEMENT_MAP, is_short_castle_valid, is_valid_knight_move
+from chess.pieces import Piece, PieceType
+from chess.square import Square
+from chess.utils import Colour, MoveCategory
 
 Position = tuple[str, str]
 Grid = dict[Position, Square]
