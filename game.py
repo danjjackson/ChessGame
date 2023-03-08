@@ -23,7 +23,7 @@ class Game:
 
         self.play()
 
-    def play(self):
+    def play(self) -> None:
         print(self.board)
         turn = Turn(self.board, self.player)
         while True:

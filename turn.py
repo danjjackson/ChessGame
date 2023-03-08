@@ -1,12 +1,12 @@
 from board import Board
-from exceptions import IllegalMoveError, NotationError
+from exceptions import IllegalMoveError
 from move import Move, parse_move
 from square import Square
 from utils import Colour, MoveCategory
 
 
 class Turn:
-    def __init__(self, board: Board, player: Colour):
+    def __init__(self, board: Board, player: Colour) -> None:
         self.player = player
         self.board = board
 
@@ -49,7 +49,7 @@ class Turn:
 
     def complete_move(
         self, source: Square, destination: Square, move_category: MoveCategory
-    ):
+    ) -> None:
         if (
             move_category == MoveCategory.SHORT_CASTLE
             or move_category == MoveCategory.LONG_CASTLE

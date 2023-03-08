@@ -60,8 +60,7 @@ class Board:
             )
         return square
 
-    def place(self, file: str, rank: str, piece: Piece):
-        # print(f"Placing a {piece.colour} {piece.type} on {file}{rank}")
+    def place(self, file: str, rank: str, piece: Piece) -> None:
         self.squares[(file, rank)].piece = piece
 
     def piece(self, file: str, rank: str) -> Piece:
@@ -94,7 +93,7 @@ class Board:
             )
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         board_repr = ""
         if self.orientation == Colour.WHITE:
             for rank in "87654321":
