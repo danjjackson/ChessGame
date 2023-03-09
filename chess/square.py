@@ -15,6 +15,9 @@ class Square:
     def is_empty(self) -> bool:
         return self.piece.type == PieceType.EMPTY
 
+    def empty(self) -> None:
+        self.piece.type = PieceType.EMPTY
+
     def move_piece(self, destination: Square, undo: bool = False):
         piece = self.piece
         piece.move() if not undo else piece.undo()

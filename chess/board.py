@@ -93,15 +93,24 @@ class Board:
             )
         ]
 
+    def set_last_moved(self, destination: Square) -> None:
+        for square in self.squares.values():
+            if square == destination:
+                square.piece.last_moved = True
+            else:
+                square.piece.last_moved = False
+
     def __str__(self) -> str:
         board_repr = ""
         if self.orientation == Colour.WHITE:
+            board_repr = board_repr + "Player 2"
             for rank in "87654321":
                 for file in "abcdefgh":
                     board_repr = (
                         board_repr + f"| {str(self.squares[(file, rank)].piece)} "
                     )
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
+            board_repr = board_repr + "Player 1"
         else:
             for rank in "12345678":
                 for file in "hgfedcba":
@@ -160,6 +169,8 @@ class Board:
                                 )
                         if move_category == MoveCategory.CAPTURE:
                             if neighbour.is_empty:
+                                if self.en_passant_is_legal(source, destination):
+                                    return True
                                 raise NotationError(
                                     "You have specified a capture but there isn't a piece on the target square"
                                 )
@@ -171,6 +182,21 @@ class Board:
                     else:
                         break
 
+        return False
+
+    def en_passant_is_legal(self, source: Square, destination: Square) -> bool:
+        if source.piece.type == PieceType.PAWN:
+            square = self.get_square(destination.file, source.rank)
+            neighbour_piece = square.piece
+            if (
+                neighbour_piece.type == PieceType.PAWN
+                and neighbour_piece.moves_made == 1
+                and neighbour_piece.last_moved == True
+            ):
+                if source.piece.colour == Colour.WHITE and source.rank == "5":
+                    return True
+                elif source.piece.colour == Colour.BLACK and source.rank == "4":
+                    return True
         return False
 
     def king_is_in_check(self, colour: Colour) -> bool:

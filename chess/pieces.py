@@ -54,7 +54,7 @@ class Piece:
     move_limit: int = 7
     capture_limit: int = 7
     moves_made: int = 0
-    last_moved: int = 0
+    last_moved: bool = False
 
     @property
     def has_moved(self) -> bool:
@@ -62,11 +62,13 @@ class Piece:
 
     def move(self) -> None:
         self.moves_made += 1
+        self.last_moved = True
         if self.type == PieceType.PAWN:
             self.move_limit = 1
 
     def undo(self):
         self.moves_made -= 1
+        self.last_moved = False
         if self.type == PieceType.PAWN and self.moves_made == 0:
             self.move_limit = 2
 

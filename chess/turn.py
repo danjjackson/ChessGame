@@ -1,6 +1,7 @@
 from chess.board import Board
 from chess.exceptions import IllegalMoveError
 from chess.move import Move, parse_move
+from chess.pieces import Piece
 from chess.square import Square
 from chess.utils import Colour, MoveCategory
 
@@ -49,7 +50,7 @@ class Turn:
 
     def complete_move(
         self, source: Square, destination: Square, move_category: MoveCategory
-    ) -> None:
+    ) -> Piece:
         if (
             move_category == MoveCategory.SHORT_CASTLE
             or move_category == MoveCategory.LONG_CASTLE
@@ -57,8 +58,27 @@ class Turn:
             if self.board.king_is_in_check(self.player):
                 raise IllegalMoveError("You cannot castle out of check!")
 
+        captured_piece = Piece()
+        en_passant = False
+        en_passanted_square = self.board.get_square(destination.file, source.rank)
+
+        if move_category == MoveCategory.CAPTURE:
+            if destination.is_empty:
+                en_passant = True
+                captured_piece = en_passanted_square.piece
+                en_passanted_square.empty()
+            else:
+                captured_piece = destination.piece
+
         source.move_piece(destination)
 
         if self.board.king_is_in_check(self.player):
             destination.move_piece(source, undo=True)
+            if move_category == MoveCategory.CAPTURE:
+                if en_passant:
+                    en_passanted_square.piece = captured_piece
+                else:
+                    destination.piece = captured_piece
             raise IllegalMoveError("Your king is in check!")
+
+        return captured_piece

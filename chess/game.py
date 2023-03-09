@@ -57,6 +57,7 @@ class Game:
                     break
 
             else:
+                self.board.set_last_moved(moves[0].dest)
                 self.player = next(self.colour_alternator)
 
                 self.board.orientation = self.player
