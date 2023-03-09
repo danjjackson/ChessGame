@@ -169,7 +169,7 @@ class Board:
                                 )
                         if move_category == MoveCategory.CAPTURE:
                             if neighbour.is_empty:
-                                if self.en_passant_is_legal(source, destination):
+                                if self.is_en_passant_legal(source, destination):
                                     return True
                                 raise NotationError(
                                     "You have specified a capture but there isn't a piece on the target square"
@@ -184,7 +184,7 @@ class Board:
 
         return False
 
-    def en_passant_is_legal(self, source: Square, destination: Square) -> bool:
+    def is_en_passant_legal(self, source: Square, destination: Square) -> bool:
         if source.piece.type == PieceType.PAWN:
             square = self.get_square(destination.file, source.rank)
             neighbour_piece = square.piece
