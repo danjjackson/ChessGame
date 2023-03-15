@@ -7,16 +7,16 @@ from chess.utils import Colour, MoveCategory
 
 
 class Board(Protocol):
-    def get_square(self, file: str, rank: str) -> Square:
+    def get_square(self, file: int, rank: int) -> Square:
         """Returns the piece at position (x, y)."""
-        return Square()
+        return Square(file, rank)
 
 
 def get_vertical_neighbour(board: Board, square: Square, orientation: Colour) -> Square:
     return (
-        board.get_square(square.file, chr(ord(square.rank) + 1))
+        board.get_square(square.file, square.rank + 1)
         if orientation == Colour.WHITE
-        else board.get_square(square.file, chr(ord(square.rank) - 1))
+        else board.get_square(square.file, square.rank - 1)
     )
 
 
@@ -24,9 +24,9 @@ def get_horizontal_neighbour(
     board: Board, square: Square, orientation: Colour
 ) -> Square:
     return (
-        board.get_square(chr(ord(square.file) + 1), square.rank)
+        board.get_square(square.file + 1, square.rank)
         if orientation == Colour.WHITE
-        else board.get_square(chr(ord(square.file) - 1), square.rank)
+        else board.get_square(square.file - 1, square.rank)
     )
 
 
@@ -34,9 +34,9 @@ def get_positive_diagonal_neighbour(
     board: Board, square: Square, orientation: Colour
 ) -> Square:
     return (
-        board.get_square(chr(ord(square.file) + 1), chr(ord(square.rank) + 1))
+        board.get_square(square.file + 1, square.rank + 1)
         if orientation == Colour.WHITE
-        else board.get_square(chr(ord(square.file) - 1), chr(ord(square.rank) - 1))
+        else board.get_square(square.file - 1, square.rank - 1)
     )
 
 
@@ -44,9 +44,9 @@ def get_negative_diagonal_neighbour(
     board: Board, square: Square, orientation: Colour
 ) -> Square:
     return (
-        board.get_square(chr(ord(square.file) - 1), chr(ord(square.rank) + 1))
+        board.get_square(square.file - 1, square.rank + 1)
         if orientation == Colour.WHITE
-        else board.get_square(chr(ord(square.file) + 1), chr(ord(square.rank) - 1))
+        else board.get_square(square.file + 1, square.rank - 1)
     )
 
 
@@ -54,14 +54,14 @@ def is_valid_knight_move(
     board: Board, source: Square, target: Square, move_category: MoveCategory
 ) -> bool:
     coordinates = [
-        (chr(ord(source.file) + 1), chr(ord(source.rank) + 2)),
-        (chr(ord(source.file) + 1), chr(ord(source.rank) - 2)),
-        (chr(ord(source.file) - 1), chr(ord(source.rank) + 2)),
-        (chr(ord(source.file) - 1), chr(ord(source.rank) - 2)),
-        (chr(ord(source.file) + 2), chr(ord(source.rank) + 1)),
-        (chr(ord(source.file) + 2), chr(ord(source.rank) - 1)),
-        (chr(ord(source.file) - 2), chr(ord(source.rank) + 1)),
-        (chr(ord(source.file) - 2), chr(ord(source.rank) - 1)),
+        (source.file + 1, source.rank + 2),
+        (source.file + 1, source.rank - 2),
+        (source.file - 1, source.rank + 2),
+        (source.file - 1, source.rank - 2),
+        (source.file + 2, source.rank + 1),
+        (source.file + 2, source.rank - 1),
+        (source.file - 2, source.rank + 1),
+        (source.file - 2, source.rank - 1),
     ]
 
     for coordinate in coordinates:
@@ -98,9 +98,9 @@ def is_short_castle_valid(board: Board, source: Square) -> bool:
             "Your king has already moved - you cannot castle anymore!"
         )
 
-    bishop_square = board.get_square(chr(ord(source.file) + 1), source.rank)
-    knight_square = board.get_square(chr(ord(source.file) + 2), source.rank)
-    rook_square = board.get_square(chr(ord(source.file) + 3), source.rank)
+    bishop_square = board.get_square(source.file + 1, source.rank)
+    knight_square = board.get_square(source.file + 2, source.rank)
+    rook_square = board.get_square(source.file + 3, source.rank)
 
     if rook_square.is_empty or rook_square.piece.has_moved:
         raise IllegalMoveError("You've moved your kingside rook!")
@@ -119,10 +119,10 @@ def is_long_castle_valid(board: Board, source: Square) -> bool:
             "Your king has already moved - you cannot castle anymore!"
         )
 
-    queen_square = board.get_square(chr(ord(source.file) - 1), source.rank)
-    bishop_square = board.get_square(chr(ord(source.file) - 2), source.rank)
-    knight_square = board.get_square(chr(ord(source.file) - 3), source.rank)
-    rook_square = board.get_square(chr(ord(source.file) - 4), source.rank)
+    queen_square = board.get_square(source.file - 1, source.rank)
+    bishop_square = board.get_square(source.file - 2, source.rank)
+    knight_square = board.get_square(source.file - 3, source.rank)
+    rook_square = board.get_square(source.file - 4, source.rank)
 
     if rook_square.is_empty or rook_square.piece.has_moved:
         raise IllegalMoveError("You've moved your queenside rook!")

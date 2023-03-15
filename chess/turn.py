@@ -40,7 +40,7 @@ class Turn:
                 valid_squares.append(source)
 
         if len(valid_squares) == 0:
-            raise IllegalMoveError("That is not a legal move")
+            raise IllegalMoveError("That is really not a legal move")
         elif len(valid_squares) > 1:
             raise IllegalMoveError(
                 "There is more than one possible option for that move"
@@ -72,13 +72,13 @@ class Turn:
 
         source.move_piece(destination)
 
-        if self.board.king_is_in_check(self.player):
-            destination.move_piece(source, undo=True)
-            if move_category == MoveCategory.CAPTURE:
-                if en_passant:
-                    en_passanted_square.piece = captured_piece
-                else:
-                    destination.piece = captured_piece
-            raise IllegalMoveError("Your king is in check!")
+        # if self.board.king_is_in_check(self.player):
+        #     destination.move_piece(source, undo=True)
+        #     if move_category == MoveCategory.CAPTURE:
+        #         if en_passant:
+        #             en_passanted_square.piece = captured_piece
+        #         else:
+        #             destination.piece = captured_piece
+        #     raise IllegalMoveError("Your king is in check!")
 
         return captured_piece

@@ -35,16 +35,6 @@ FEN_MAP: dict[str, PieceType] = {
     "n": PieceType.KNIGHT,
 }
 
-PIECE_VALUE: dict[PieceType, int] = {
-    PieceType.EMPTY: 0,
-    PieceType.PAWN: 1,
-    PieceType.ROOK: 5,
-    PieceType.BISHOP: 3,
-    PieceType.QUEEN: 9,
-    PieceType.KING: 100,
-    PieceType.KNIGHT: 3,
-}
-
 
 @dataclass
 class Piece:

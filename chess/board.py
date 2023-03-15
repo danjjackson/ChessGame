@@ -5,27 +5,37 @@ from dataclasses import dataclass, field
 from chess.exceptions import IllegalMoveError, NotationError, OutOfBoundsError
 from chess.moves import MOVEMENT_MAP, is_short_castle_valid, is_valid_knight_move
 from chess.pieces import Piece, PieceType
+from chess.players import Player
 from chess.square import Square
 from chess.utils import Colour, MoveCategory
 
-Position = tuple[str, str]
+Position = tuple[int, int]
 Grid = dict[Position, Square]
 
-notation_map = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "h"}
+int_str_file_map = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "h"}
+int_str_rank_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5", 5: "6", 6: "7", 7: "8"}
+str_int_file_map = {string: integer for integer, string in int_str_file_map.items()}
+str_int_rank_map = {string: integer for integer, string in int_str_rank_map.items()}
+
+position_map = {
+    (str_file, str_rank): (int_file, int_rank)
+    for int_file, str_file in int_str_file_map.items()
+    for int_rank, str_rank in int_str_rank_map.items()
+}
 
 
 def empty_board() -> Grid:
     grid: Grid = {}
-    for file in "abcdefgh":
-        for rank in "12345678":
+    for file in range(8):
+        for rank in range(8):
             grid[(file, rank)] = Square(file, rank)
     return grid
 
 
 @dataclass
 class Board:
+    orientation: Colour
     squares: Grid = field(default_factory=empty_board)
-    orientation: Colour = Colour.WHITE
 
     @staticmethod
     def from_fen(
@@ -37,21 +47,18 @@ class Board:
 
         for ind_rank, rank in enumerate(fenlist):
             column = 0
-            for ind_file, char in enumerate(rank):
+            for char in rank:
                 if char.isnumeric():
-                    column += int(char) - 1
+                    column += int(char)
                     continue
-                board.place(
-                    notation_map[ind_file + column],
-                    str(ind_rank + 1),
-                    Piece.from_fen(char),
-                )
-            # if column + ind_file != 7:
-            #     raise ValueError("Invalid FEN string")
+                board.place(column, ind_rank, Piece.from_fen(char))
+                column += 1
+            if column != 8:
+                raise ValueError("Invalid FEN string")
             column = 0
         return board
 
-    def get_square(self, file: str, rank: str) -> Square:
+    def get_square(self, file: int, rank: int) -> Square:
         try:
             square = self.squares[(file, rank)]
         except KeyError:
@@ -60,16 +67,16 @@ class Board:
             )
         return square
 
-    def place(self, file: str, rank: str, piece: Piece) -> None:
+    def place(self, file: int, rank: int, piece: Piece) -> None:
         self.squares[(file, rank)].piece = piece
 
-    def piece(self, file: str, rank: str) -> Piece:
+    def piece(self, file: int, rank: int) -> Piece:
         return self.squares[(file, rank)].piece
 
-    def empty(self, file: str, rank: str) -> None:
+    def empty(self, file: int, rank: int) -> None:
         self.squares[(file, rank)] = Square(file, rank)
 
-    def is_empty(self, file: str, rank: str) -> bool:
+    def is_empty(self, file: int, rank: int) -> bool:
         return self.squares[(file, rank)].is_empty
 
     def find_king(self, colour: Colour) -> Square:
@@ -88,8 +95,8 @@ class Board:
             if (
                 square.piece.type == piece_type
                 and square.piece.colour == colour
-                and square.file in possible_file
-                and square.rank in possible_rank
+                and int_str_file_map[square.file] in possible_file
+                and int_str_rank_map[square.rank] in possible_rank
             )
         ]
 
@@ -103,23 +110,22 @@ class Board:
     def __str__(self) -> str:
         board_repr = ""
         if self.orientation == Colour.WHITE:
-            board_repr = board_repr + "Player 2"
             for rank in "87654321":
                 for file in "abcdefgh":
                     board_repr = (
-                        board_repr + f"| {str(self.squares[(file, rank)].piece)} "
+                        board_repr
+                        + f"| {str(self.squares[position_map[(file, rank)]].piece)} "
                     )
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
-            board_repr = board_repr + "Player 1"
         else:
             for rank in "12345678":
                 for file in "hgfedcba":
                     board_repr = (
-                        board_repr + f"| {str(self.squares[(file, rank)].piece)} "
+                        board_repr
+                        + f"| {str(self.squares[position_map[(file, rank)]].piece)} "
                     )
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
-
-        return board_repr
+        return board_repr[:-1]
 
     def is_reachable(
         self,
@@ -141,8 +147,8 @@ class Board:
         neighbour_funcs = MOVEMENT_MAP[source.piece.type][move_category]
 
         for neighbour_func in neighbour_funcs:
-            temp = source
             for orientation in source.piece.orientation:
+                temp = source
                 move_distance = 0
                 movement_limit = (
                     source.piece.move_limit
@@ -214,4 +220,4 @@ class Board:
 
 if __name__ == "__main__":
     board = Board.from_fen()
-    print(board)
+    # print(board)

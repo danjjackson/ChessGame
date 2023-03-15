@@ -1,6 +1,7 @@
 from chess.board import Board
 from chess.move import NotationError
 from chess.pieces import Colour
+from chess.players import Player
 from chess.turn import IllegalMoveError, Turn
 
 
@@ -19,14 +20,17 @@ class Game:
     def __init__(self, fen_string: str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"):
         self.colour_alternator = alternate_players(Colour.WHITE)
         self.player = next(self.colour_alternator)
+
+        self.white_player = Player("Daniel", "Jackson", 2200, Colour.WHITE)
+        self.black_player = Player("Caitlin", "Duschenes", 1100, Colour.BLACK)
         self.board = Board.from_fen(fen_string, self.player)
 
         self.play()
 
     def play(self) -> None:
-        print(self.board)
-        turn = Turn(self.board, self.player)
+        self.show_board()
         while True:
+            turn = Turn(self.board, self.player)
             print(f"{turn.player} player: Please enter a move!")
             try:
                 moves = turn.enter_move(turn.player)
@@ -51,16 +55,30 @@ class Game:
                     break
 
                 try:
-                    turn.complete_move(source_square, move.dest, move.move_category)
+                    captured_piece = turn.complete_move(
+                        source_square, move.dest, move.move_category
+                    )
                 except IllegalMoveError as e:
                     print(e.message)
                     break
 
             else:
+                if self.player == Colour.WHITE:
+                    self.white_player.pieces_captured.append(captured_piece)
+                else:
+                    self.black_player.pieces_captured.append(captured_piece)
+
                 self.board.set_last_moved(moves[0].dest)
+
                 self.player = next(self.colour_alternator)
-
                 self.board.orientation = self.player
-                print(self.board)
+                self.show_board()
 
-                turn = Turn(self.board, self.player)
+    def show_board(self):
+        print(self.black_player) if self.player == Colour.WHITE else print(
+            self.white_player
+        )
+        print(self.board)
+        print(self.white_player) if self.player == Colour.WHITE else print(
+            self.black_player
+        )
