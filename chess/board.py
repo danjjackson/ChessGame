@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from chess.exceptions import IllegalMoveError, NotationError, OutOfBoundsError
 from chess.moves import MOVEMENT_MAP, is_short_castle_valid, is_valid_knight_move
 from chess.pieces import Piece, PieceType
-from chess.players import Player
 from chess.square import Square
 from chess.utils import Colour, MoveCategory
 
@@ -204,18 +203,6 @@ class Board:
                 elif source.piece.colour == Colour.BLACK and source.rank == "4":
                     return True
         return False
-
-    def king_is_in_check(self, colour: Colour) -> bool:
-        king_square = self.find_king(colour)
-
-        is_in_check = False
-
-        for square in self.squares.values():
-            if square.piece.colour != colour and square.piece.type != PieceType.EMPTY:
-                if self.is_reachable(square, king_square, MoveCategory.CAPTURE):
-                    is_in_check = True
-
-        return is_in_check
 
 
 if __name__ == "__main__":

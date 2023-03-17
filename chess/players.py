@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 
+from chess.board import Board
+from chess.moves import MoveCategory
 from chess.pieces import Piece, PieceType
 from chess.utils import Colour
 
@@ -34,3 +36,18 @@ class Player:
         return f"{self.first_name} {self.last_name} ({self.rating})" + (
             " {}" * len(self.pieces_captured)
         ).format(*self.pieces_captured)
+
+    def king_is_in_check(self, board: Board) -> bool:
+        king_square = board.find_king(self.colour)
+
+        is_in_check = False
+
+        for square in board.squares.values():
+            if (
+                square.piece.colour != self.colour
+                and square.piece.type != PieceType.EMPTY
+            ):
+                if board.is_reachable(square, king_square, MoveCategory.CAPTURE):
+                    is_in_check = True
+
+        return is_in_check

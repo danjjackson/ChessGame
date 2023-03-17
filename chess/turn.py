@@ -2,12 +2,13 @@ from chess.board import Board
 from chess.exceptions import IllegalMoveError
 from chess.move import Move, parse_move
 from chess.pieces import Piece
+from chess.players import Player
 from chess.square import Square
 from chess.utils import Colour, MoveCategory
 
 
 class Turn:
-    def __init__(self, board: Board, player: Colour) -> None:
+    def __init__(self, board: Board, player: Player) -> None:
         self.player = player
         self.board = board
 
@@ -17,7 +18,7 @@ class Turn:
     def find_possible_source_squares(self, move: Move) -> list[Square]:
         possible_squares = self.board.find_squares(
             move.piece_type,
-            self.player,
+            self.player.colour,
             move.src_file,
             move.src_rank,
         )
@@ -55,7 +56,7 @@ class Turn:
             move_category == MoveCategory.SHORT_CASTLE
             or move_category == MoveCategory.LONG_CASTLE
         ):
-            if self.board.king_is_in_check(self.player):
+            if self.player.king_is_in_check(self.board):
                 raise IllegalMoveError("You cannot castle out of check!")
 
         captured_piece = Piece()
@@ -72,13 +73,13 @@ class Turn:
 
         source.move_piece(destination)
 
-        # if self.board.king_is_in_check(self.player):
-        #     destination.move_piece(source, undo=True)
-        #     if move_category == MoveCategory.CAPTURE:
-        #         if en_passant:
-        #             en_passanted_square.piece = captured_piece
-        #         else:
-        #             destination.piece = captured_piece
-        #     raise IllegalMoveError("Your king is in check!")
+        if self.player.king_is_in_check(self.board):
+            destination.move_piece(source, undo=True)
+            if move_category == MoveCategory.CAPTURE:
+                if en_passant:
+                    en_passanted_square.piece = captured_piece
+                else:
+                    destination.piece = captured_piece
+            raise IllegalMoveError("Your king is in check!")
 
         return captured_piece
