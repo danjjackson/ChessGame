@@ -1,8 +1,8 @@
 from chess.board import Board
-from chess.move import NotationError
+from chess.exceptions import IllegalMoveError, NotationError
+from chess.move import parse_move
 from chess.pieces import Colour
 from chess.players import Player
-from chess.turn import IllegalMoveError, Turn
 
 
 def alternate_players(white_player, black_player, start: Colour = Colour.WHITE):
@@ -17,7 +17,7 @@ def alternate_players(white_player, black_player, start: Colour = Colour.WHITE):
 
 
 class Game:
-    def __init__(self, fen_string: str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"):
+    def __init__(self, fen_string: str = "rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"):
         self.white_player = Player("Daniel", "Jackson", 2200, Colour.WHITE)
         self.black_player = Player("Caitlin", "Duschenes", 1100, Colour.BLACK)
         self.player_alternator = alternate_players(
@@ -31,46 +31,34 @@ class Game:
     def play(self) -> None:
         self.show_board()
         while True:
-            turn = Turn(self.board, self.player)
-            print(f"{turn.player.colour} player: Please enter a move!")
+            print(f"{self.player.colour} player: Please enter a move!")
             try:
-                moves = turn.enter_move(turn.player)
+                moves = parse_move(self.board, self.player)
             except NotationError as e:
                 print(e.message)
                 continue
             for move in moves:
                 try:
-                    possible_squares = turn.find_possible_source_squares(move)
-                except IllegalMoveError as e:
-                    print(e.message)
-                    break
-                try:
-                    source_square = turn.find_valid_source_square(
-                        possible_squares, move.move_category, move.dest
+                    source_square = self.board.find_source_square(
+                        move.piece_type,
+                        move.destination,
+                        move.move_category,
+                        self.player.colour,
+                        move.src_file,
+                        move.src_rank,
                     )
                 except IllegalMoveError as e:
                     print(e.message)
                     break
-                except NotationError as e:
-                    print(e.message)
-                    break
-
                 try:
-                    captured_piece = turn.complete_move(
-                        source_square, move.dest, move.move_category
+                    move.complete_move(
+                        self.board, source_square, move.destination, move.move_category
                     )
                 except IllegalMoveError as e:
                     print(e.message)
                     break
 
-            else:
-                if self.player == Colour.WHITE:
-                    self.white_player.pieces_captured.append(captured_piece)
-                else:
-                    self.black_player.pieces_captured.append(captured_piece)
-
-                self.board.set_last_moved(moves[0].dest)
-
+                self.board.set_last_moved(moves[0].destination)
                 self.player = next(self.player_alternator)
                 self.board.orientation = self.player.colour
                 self.show_board()

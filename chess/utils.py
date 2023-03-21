@@ -14,3 +14,13 @@ class Colour(Enum):
     BLANK = -1
     WHITE = 0
     BLACK = 1
+
+
+class PieceType(Enum):
+    EMPTY = "empty"
+    PAWN = "pawn"
+    ROOK = "rook"
+    BISHOP = "bishop"
+    QUEEN = "queen"
+    KNIGHT = "knight"
+    KING = "king"

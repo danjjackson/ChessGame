@@ -1,19 +1,42 @@
 from __future__ import annotations
 
+from typing import Optional, Protocol
+
 import pydantic
 
-from chess.board import Board, position_map
-from chess.exceptions import NotationError
-from chess.pieces import FEN_MAP, PieceType
+from chess.exceptions import IllegalMoveError, NotationError
+from chess.pieces import FEN_MAP, Piece, PieceType
+from chess.players import Player
 from chess.square import Square
 from chess.utils import Colour, MoveCategory
 
 notation_map = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
 
+int_str_file_map = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "h"}
+int_str_rank_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5", 5: "6", 6: "7", 7: "8"}
+str_int_file_map = {string: integer for integer, string in int_str_file_map.items()}
+str_int_rank_map = {string: integer for integer, string in int_str_rank_map.items()}
+
+position_map = {
+    (str_file, str_rank): (int_file, int_rank)
+    for int_file, str_file in int_str_file_map.items()
+    for int_rank, str_rank in int_str_rank_map.items()
+}
+
+
+class Board(Protocol):
+    def get_square(self, file: int, rank: int) -> Square:
+        """Returns the piece at position (x, y)."""
+        return Square(file, rank)
+
+    def king_is_in_check(self, colour: Colour) -> bool:
+        return False
+
 
 class Move(pydantic.BaseModel):
+    player: Player
     piece_type: PieceType = PieceType.EMPTY
-    dest: Square = Square()
+    destination: Square = Square()
     move_category: MoveCategory = MoveCategory.REGULAR
     src_file: str = "abcdefgh"
     src_rank: str = "12345678"
@@ -42,23 +65,65 @@ class Move(pydantic.BaseModel):
     class Config:
         validate_assignment = True
 
+    def complete_move(
+        self,
+        board: Board,
+        source: Square,
+        destination: Square,
+        move_category: MoveCategory,
+    ) -> None:
+        if (
+            move_category == MoveCategory.SHORT_CASTLE
+            or move_category == MoveCategory.LONG_CASTLE
+        ):
+            if board.king_is_in_check(self.player.colour):
+                raise IllegalMoveError("You cannot castle out of check!")
 
-def parse_move(board: Board, player: Colour) -> list[Move]:
+        captured_piece = Piece()
+        en_passant = False
+        en_passanted_square = board.get_square(destination.file, source.rank)
+
+        if move_category == MoveCategory.CAPTURE:
+            if destination.is_empty:
+                en_passant = True
+                captured_piece = en_passanted_square.piece
+                en_passanted_square.empty()
+            else:
+                captured_piece = destination.piece
+
+            self.player.pieces_captured.append(captured_piece)
+
+        source.move_piece(destination)
+
+        if board.king_is_in_check(self.player.colour):
+            destination.move_piece(source, undo=True)
+            if move_category == MoveCategory.CAPTURE:
+                if en_passant:
+                    en_passanted_square.piece = captured_piece
+                else:
+                    destination.piece = captured_piece
+                self.player.pieces_captured.pop()
+            raise IllegalMoveError("Your king is in check!")
+
+
+def parse_move(board: Board, player: Player) -> list[Move]:
     move = input()
 
     if move == "0-0":
         return [
             Move(
+                player=player,
                 piece_type=PieceType.KING,
-                dest=board.get_square(*position_map[("g", "1")])
-                if player == Colour.WHITE
+                destination=board.get_square(*position_map[("g", "1")])
+                if player.colour == Colour.WHITE
                 else board.get_square(*position_map[("g", "8")]),
                 move_category=MoveCategory.SHORT_CASTLE,
             ),
             Move(
+                player=player,
                 piece_type=PieceType.ROOK,
-                dest=board.get_square(*position_map[("f", "1")])
-                if player == Colour.WHITE
+                destination=board.get_square(*position_map[("f", "1")])
+                if player.colour == Colour.WHITE
                 else board.get_square(*position_map[("f", "8")]),
                 move_category=MoveCategory.SHORT_CASTLE,
                 src_file="h",
@@ -68,16 +133,18 @@ def parse_move(board: Board, player: Colour) -> list[Move]:
     if move == "0-0-0":
         return [
             Move(
+                player=player,
                 piece_type=PieceType.KING,
-                dest=board.get_square(*position_map[("c", "1")])
-                if player == Colour.WHITE
+                destination=board.get_square(*position_map[("c", "1")])
+                if player.colour == Colour.WHITE
                 else board.get_square(*position_map[("c", "8")]),
                 move_category=MoveCategory.SHORT_CASTLE,
             ),
             Move(
+                player=player,
                 piece_type=PieceType.ROOK,
-                dest=board.get_square(*position_map[("d", "1")])
-                if player == Colour.WHITE
+                destination=board.get_square(*position_map[("d", "1")])
+                if player.colour == Colour.WHITE
                 else board.get_square(*position_map[("d", "8")]),
                 move_category=MoveCategory.SHORT_CASTLE,
                 src_file="a",
@@ -85,7 +152,7 @@ def parse_move(board: Board, player: Colour) -> list[Move]:
             ),
         ]
     if len(move) < 7:
-        test_move = Move()
+        test_move = Move(player=player)
         x = move.find("x")
         if x == 1 or x == 2:
             test_move.move_category = MoveCategory.CAPTURE
@@ -115,12 +182,16 @@ def parse_move(board: Board, player: Colour) -> list[Move]:
 
         if "=" not in move:
             try:
-                test_move.dest = board.get_square(*position_map[(move[-2], move[-1])])
+                test_move.destination = board.get_square(
+                    *position_map[(move[-2], move[-1])]
+                )
             except KeyError:
                 raise NotationError(message="That square does not exist.")
         else:
             try:
-                test_move.dest = board.get_square(*position_map[(move[-4], move[-3])])
+                test_move.destination = board.get_square(
+                    *position_map[(move[-4], move[-3])]
+                )
             except KeyError:
                 raise NotationError(message="That square does not exist.")
 

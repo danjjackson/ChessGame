@@ -2,25 +2,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from chess.exceptions import IllegalMoveError, NotationError, OutOfBoundsError
-from chess.moves import MOVEMENT_MAP, is_short_castle_valid, is_valid_knight_move
+from chess.exceptions import (
+    AmbiguousMoveError,
+    IllegalMoveError,
+    NotationError,
+    OutOfBoundsError,
+)
+from chess.move import Move, int_str_file_map, int_str_rank_map, position_map
+from chess.moves import (
+    MOVEMENT_MAP,
+    get_knight_squares,
+    is_long_castle_valid,
+    is_short_castle_valid,
+)
 from chess.pieces import Piece, PieceType
 from chess.square import Square
 from chess.utils import Colour, MoveCategory
 
 Position = tuple[int, int]
 Grid = dict[Position, Square]
-
-int_str_file_map = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "h"}
-int_str_rank_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5", 5: "6", 6: "7", 7: "8"}
-str_int_file_map = {string: integer for integer, string in int_str_file_map.items()}
-str_int_rank_map = {string: integer for integer, string in int_str_rank_map.items()}
-
-position_map = {
-    (str_file, str_rank): (int_file, int_rank)
-    for int_file, str_file in int_str_file_map.items()
-    for int_rank, str_rank in int_str_rank_map.items()
-}
 
 
 def empty_board() -> Grid:
@@ -126,68 +126,153 @@ class Board:
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
         return board_repr[:-1]
 
+    def find_source_square(
+        self,
+        piece_type: PieceType,
+        destination: Square,
+        move_category: MoveCategory,
+        colour: Colour,
+        src_file: str = "abcdefgh",
+        src_rank: str = "12345678",
+    ) -> Square:
+        possible_source_squares: list[Square] = []
+
+        if move_category == MoveCategory.SHORT_CASTLE:
+            if piece_type == PieceType.KING:
+                king_square = self.find_king(colour)
+                if is_short_castle_valid(self, king_square):
+                    possible_source_squares.append(king_square)
+            elif piece_type == PieceType.ROOK:
+                rook_square = self.get_square(destination.file + 2, destination.rank)
+                possible_source_squares.append(rook_square)
+
+        elif move_category == MoveCategory.LONG_CASTLE:
+            if piece_type == PieceType.KING:
+                king_square = self.find_king(colour)
+                if is_long_castle_valid(self, king_square):
+                    possible_source_squares.append(king_square)
+            elif piece_type == PieceType.ROOK:
+                rook_square = self.get_square(destination.file - 3, destination.rank)
+                possible_source_squares.append(rook_square)
+
+        elif piece_type == PieceType.KNIGHT:
+            knight_squares = get_knight_squares(self, destination)
+            for square in knight_squares:
+                if self.valid_move(square, colour, piece_type, src_file, src_rank):
+                    possible_source_squares.append(square)
+
+        else:
+            move_funcs = MOVEMENT_MAP[piece_type][move_category]
+            for orientation in [Colour.WHITE, Colour.BLACK]:
+                for move_func in move_funcs:
+                    source = destination
+                    move_distance = 0
+                    while move_distance < 7:
+                        try:
+                            neighbour = move_func(self, source, orientation)
+                        except OutOfBoundsError:
+                            break
+                        if neighbour.piece.type == PieceType.EMPTY:
+                            source = neighbour
+                            move_distance += 1
+                            continue
+                        elif self.valid_move(
+                            neighbour,
+                            colour,
+                            piece_type,
+                            src_file,
+                            src_rank,
+                        ):
+                            possible_source_squares.append(neighbour)
+                            break
+                        else:
+                            break
+
+        if not len(possible_source_squares):
+            raise IllegalMoveError(
+                f"{str(destination)} is not reachable by a {colour} {piece_type.value}"
+            )
+        elif len(possible_source_squares) > 1:
+            raise AmbiguousMoveError(
+                f"There is more than one possible move! Please clarify."
+            )
+        return possible_source_squares[0]
+
+    def valid_move(
+        self,
+        destination: Square,
+        colour: Colour,
+        piece_type: PieceType,
+        source_file: str,
+        source_rank: str,
+    ) -> bool:
+        return (
+            destination.piece.type == piece_type
+            and destination.piece.colour == colour
+            and int_str_file_map[destination.file] in source_file
+            and int_str_rank_map[destination.rank] in source_rank
+        )
+
     def is_reachable(
         self,
         source: Square,
-        destination: Square,
+        target_destination: Square,
+        legal_squares: list[Square],
         move_category: MoveCategory,
     ) -> bool:
-        if source.piece.type == PieceType.KNIGHT:
-            return is_valid_knight_move(self, source, destination, move_category)
+        for square in legal_squares:
+            if square == target_destination:
+                if square.piece.colour == source.piece.colour:
+                    raise IllegalMoveError(
+                        "That square is already occupied by one of your pieces!"
+                    )
 
-        if move_category == MoveCategory.SHORT_CASTLE:
-            if source.piece.type == PieceType.KING:
-                return is_short_castle_valid(self, source)
-            elif source.piece.type == PieceType.ROOK:
-                return True
-            else:
-                return False
-
-        neighbour_funcs = MOVEMENT_MAP[source.piece.type][move_category]
-
-        for neighbour_func in neighbour_funcs:
-            for orientation in source.piece.orientation:
-                temp = source
-                move_distance = 0
-                movement_limit = (
-                    source.piece.move_limit
-                    if move_category == MoveCategory.REGULAR
-                    else source.piece.capture_limit
-                )
-                while move_distance < movement_limit:
-                    move_distance += 1
-                    try:
-                        neighbour = neighbour_func(self, temp, orientation)
-                    except OutOfBoundsError:
-                        break
-                    if neighbour == destination:
-                        if neighbour.piece.colour == source.piece.colour:
-                            raise IllegalMoveError(
-                                "That square is already occupied by one of your pieces!"
-                            )
-                        if move_category == MoveCategory.REGULAR:
-                            if neighbour.is_empty:
-                                return True
-                            else:
-                                raise NotationError(
-                                    "There is an opponents piece on that square! Do you want to capture it?"
-                                )
-                        if move_category == MoveCategory.CAPTURE:
-                            if neighbour.is_empty:
-                                if self.is_en_passant_legal(source, destination):
-                                    return True
-                                raise NotationError(
-                                    "You have specified a capture but there isn't a piece on the target square"
-                                )
-                            else:
-                                return True
-                    elif neighbour.is_empty:
-                        temp = neighbour
-                        continue
+                if move_category == MoveCategory.REGULAR:
+                    if square.is_empty:
+                        return True
                     else:
-                        break
+                        raise NotationError(
+                            "There is an opponents piece on that square! Do you want to capture it?"
+                        )
+
+                if move_category == MoveCategory.CAPTURE:
+                    if square.is_empty:
+                        if self.is_en_passant_legal(source, target_destination):
+                            return True
+                        raise NotationError(
+                            "You have specified a capture but there isn't a piece on the target square"
+                        )
+                    else:
+                        return True
+
+            else:
+                if not square.is_empty:
+                    return False
 
         return False
+
+    def king_is_in_check(self, colour: Colour) -> bool:
+        king_square = self.find_king(colour)
+
+        def other_colour(colour: Colour) -> Colour:
+            if colour == Colour.WHITE:
+                return Colour.BLACK
+            else:
+                return Colour.WHITE
+
+        for piece_type in PieceType:
+            if piece_type == PieceType.EMPTY:
+                continue
+            try:
+                self.find_source_square(
+                    piece_type, king_square, MoveCategory.CAPTURE, other_colour(colour)
+                )
+            except IllegalMoveError:
+                return False
+            except AmbiguousMoveError:
+                return False
+
+        return True
 
     def is_en_passant_legal(self, source: Square, destination: Square) -> bool:
         if source.piece.type == PieceType.PAWN:

@@ -1,6 +1,6 @@
 from typing import Callable, Protocol
 
-from chess.exceptions import IllegalMoveError, NotationError, OutOfBoundsError
+from chess.exceptions import IllegalMoveError, OutOfBoundsError
 from chess.pieces import PieceType
 from chess.square import Square
 from chess.utils import Colour, MoveCategory
@@ -12,31 +12,29 @@ class Board(Protocol):
         return Square(file, rank)
 
 
-def get_vertical_neighbour(board: Board, square: Square, orientation: Colour) -> Square:
+def get_vertical_neighbour(board: Board, square: Square, direction: Colour) -> Square:
     return (
-        board.get_square(square.file, square.rank + 1)
-        if orientation == Colour.WHITE
-        else board.get_square(square.file, square.rank - 1)
+        board.get_square(square.file, square.rank - 1)
+        if direction == Colour.WHITE
+        else board.get_square(square.file, square.rank + 1)
     )
 
 
-def get_horizontal_neighbour(
-    board: Board, square: Square, orientation: Colour
-) -> Square:
+def get_horizontal_neighbour(board: Board, square: Square, direction: Colour) -> Square:
     return (
-        board.get_square(square.file + 1, square.rank)
-        if orientation == Colour.WHITE
-        else board.get_square(square.file - 1, square.rank)
+        board.get_square(square.file - 1, square.rank)
+        if direction == Colour.WHITE
+        else board.get_square(square.file + 1, square.rank)
     )
 
 
 def get_positive_diagonal_neighbour(
-    board: Board, square: Square, orientation: Colour
+    board: Board, square: Square, direction: Colour
 ) -> Square:
     return (
-        board.get_square(square.file + 1, square.rank + 1)
-        if orientation == Colour.WHITE
-        else board.get_square(square.file - 1, square.rank - 1)
+        board.get_square(square.file - 1, square.rank - 1)
+        if direction == Colour.WHITE
+        else board.get_square(square.file + 1, square.rank + 1)
     )
 
 
@@ -44,52 +42,33 @@ def get_negative_diagonal_neighbour(
     board: Board, square: Square, orientation: Colour
 ) -> Square:
     return (
-        board.get_square(square.file - 1, square.rank + 1)
+        board.get_square(square.file + 1, square.rank - 1)
         if orientation == Colour.WHITE
-        else board.get_square(square.file + 1, square.rank - 1)
+        else board.get_square(square.file - 1, square.rank + 1)
     )
 
 
-def is_valid_knight_move(
-    board: Board, source: Square, target: Square, move_category: MoveCategory
-) -> bool:
+def get_knight_squares(board: Board, square: Square) -> list[Square]:
     coordinates = [
-        (source.file + 1, source.rank + 2),
-        (source.file + 1, source.rank - 2),
-        (source.file - 1, source.rank + 2),
-        (source.file - 1, source.rank - 2),
-        (source.file + 2, source.rank + 1),
-        (source.file + 2, source.rank - 1),
-        (source.file - 2, source.rank + 1),
-        (source.file - 2, source.rank - 1),
+        (square.file + 1, square.rank + 2),
+        (square.file + 1, square.rank - 2),
+        (square.file - 1, square.rank + 2),
+        (square.file - 1, square.rank - 2),
+        (square.file + 2, square.rank + 1),
+        (square.file + 2, square.rank - 1),
+        (square.file - 2, square.rank + 1),
+        (square.file - 2, square.rank - 1),
     ]
 
+    squares = []
     for coordinate in coordinates:
         try:
             square = board.get_square(*coordinate)
-            if square == target:
-                if square.piece.colour == source.piece.colour:
-                    raise IllegalMoveError(
-                        "That square is already occupied by one of your pieces!"
-                    )
-                if move_category == MoveCategory.REGULAR:
-                    if square.is_empty:
-                        return True
-                    else:
-                        raise NotationError(
-                            "The square is occupied by your opponents piece. Do you want to capture it?"
-                        )
-                if move_category == MoveCategory.CAPTURE:
-                    if square.is_empty:
-                        raise NotationError(
-                            "There isn't a piece on that square to capture!"
-                        )
-                    else:
-                        return True
+            squares.append(square)
         except OutOfBoundsError:
             continue
 
-    return False
+    return squares
 
 
 def is_short_castle_valid(board: Board, source: Square) -> bool:
@@ -140,6 +119,8 @@ def is_long_castle_valid(board: Board, source: Square) -> bool:
 
 
 NeighbourCalculator = Callable[[Board, Square, Colour], Square]
+
+
 MOVEMENT_MAP: dict[PieceType, dict[MoveCategory, list[NeighbourCalculator]]] = {
     PieceType.PAWN: {
         MoveCategory.REGULAR: [get_vertical_neighbour],
@@ -164,30 +145,78 @@ MOVEMENT_MAP: dict[PieceType, dict[MoveCategory, list[NeighbourCalculator]]] = {
     },
     PieceType.QUEEN: {
         MoveCategory.REGULAR: [
-            get_vertical_neighbour,
-            get_horizontal_neighbour,
             get_positive_diagonal_neighbour,
             get_negative_diagonal_neighbour,
+            get_vertical_neighbour,
+            get_horizontal_neighbour,
         ],
         MoveCategory.CAPTURE: [
-            get_vertical_neighbour,
-            get_horizontal_neighbour,
             get_positive_diagonal_neighbour,
             get_negative_diagonal_neighbour,
+            get_vertical_neighbour,
+            get_horizontal_neighbour,
         ],
     },
     PieceType.KING: {
         MoveCategory.REGULAR: [
-            get_vertical_neighbour,
-            get_horizontal_neighbour,
             get_positive_diagonal_neighbour,
             get_negative_diagonal_neighbour,
+            get_vertical_neighbour,
+            get_horizontal_neighbour,
         ],
         MoveCategory.CAPTURE: [
-            get_vertical_neighbour,
-            get_horizontal_neighbour,
             get_positive_diagonal_neighbour,
             get_negative_diagonal_neighbour,
+            get_vertical_neighbour,
+            get_horizontal_neighbour,
         ],
     },
 }
+# MOVEMENT_MAP: dict[PieceType, dict[MoveCategory, list[NeighbourCalculator]]] = {
+#     PieceType.PAWN: {
+#         MoveCategory.REGULAR: [get_rank],
+#         MoveCategory.CAPTURE: [get_forwards_diagonals],
+#     },
+#     PieceType.ROOK: {
+#         MoveCategory.REGULAR: [get_rank, get_file],
+#         MoveCategory.CAPTURE: [get_rank, get_file],
+#     },
+#     PieceType.BISHOP: {
+#         MoveCategory.REGULAR: [
+#             get_forwards_diagonals,
+#             get_backwards_diagonals,
+#         ],
+#         MoveCategory.CAPTURE: [
+#             get_forwards_diagonals,
+#             get_backwards_diagonals,
+#         ],
+#     },
+#     PieceType.QUEEN: {
+#         MoveCategory.REGULAR: [
+#             get_file,
+#             get_rank,
+#             get_forwards_diagonals,
+#             get_backwards_diagonals,
+#         ],
+#         MoveCategory.CAPTURE: [
+#             get_file,
+#             get_rank,
+#             get_forwards_diagonals,
+#             get_backwards_diagonals,
+#         ],
+#     },
+#     PieceType.KING: {
+#         MoveCategory.REGULAR: [
+#             get_file,
+#             get_rank,
+#             get_forwards_diagonals,
+#             get_backwards_diagonals,
+#         ],
+#         MoveCategory.CAPTURE: [
+#             get_file,
+#             get_rank,
+#             get_forwards_diagonals,
+#             get_backwards_diagonals,
+#         ],
+#     },
+# }

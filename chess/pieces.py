@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
-from chess.utils import Colour
+from chess.utils import Colour, MoveCategory
 
 
 class PieceType(Enum):

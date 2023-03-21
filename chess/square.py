@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 from chess.pieces import Piece, PieceType
 
@@ -20,6 +21,9 @@ class Square:
 
     def empty(self) -> None:
         self.piece.type = PieceType.EMPTY
+
+    def set_piece(self, piece: Piece) -> None:
+        self.piece = piece
 
     def move_piece(self, destination: Square, undo: bool = False):
         piece = self.piece
