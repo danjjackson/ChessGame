@@ -1,7 +1,10 @@
-from chess.board import Board
-from chess.game import Game
+from chess.game import ChessGame
+
+
+def main() -> None:
+    chess = ChessGame()
+    chess.play()
+
 
 if __name__ == "__main__":
-    Game()
-    # board = Board.from_fen()
-    # print(board)
+    main()

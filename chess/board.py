@@ -8,7 +8,7 @@ from chess.exceptions import (
     NotationError,
     OutOfBoundsError,
 )
-from chess.move import Move, int_str_file_map, int_str_rank_map, position_map
+from chess.move import int_str_file_map, int_str_rank_map, position_map
 from chess.moves import (
     MOVEMENT_MAP,
     get_knight_squares,

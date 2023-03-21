@@ -16,7 +16,7 @@ def alternate_players(white_player, black_player, start: Colour = Colour.WHITE):
             yield white_player
 
 
-class Game:
+class ChessGame
     def __init__(self, fen_string: str = "rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"):
         self.white_player = Player("Daniel", "Jackson", 2200, Colour.WHITE)
         self.black_player = Player("Caitlin", "Duschenes", 1100, Colour.BLACK)
