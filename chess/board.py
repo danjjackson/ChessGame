@@ -2,12 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from chess.exceptions import (
-    AmbiguousMoveError,
-    IllegalMoveError,
-    NotationError,
-    OutOfBoundsError,
-)
+from chess.exceptions import AmbiguousMoveError, IllegalMoveError, OutOfBoundsError
 from chess.move import int_str_file_map, int_str_rank_map, position_map
 from chess.moves import (
     MOVEMENT_MAP,
@@ -166,6 +161,8 @@ class Board:
             for orientation in [Colour.WHITE, Colour.BLACK]:
                 for move_func in move_funcs:
                     source = destination
+                    # if source.piece.colour == colour:
+                    #     raise IllegalMoveError("There's already a piece on that square")
                     move_distance = 0
                     while move_distance < 7:
                         try:
@@ -213,44 +210,6 @@ class Board:
             and int_str_rank_map[destination.rank] in source_rank
         )
 
-    def is_reachable(
-        self,
-        source: Square,
-        target_destination: Square,
-        legal_squares: list[Square],
-        move_category: MoveCategory,
-    ) -> bool:
-        for square in legal_squares:
-            if square == target_destination:
-                if square.piece.colour == source.piece.colour:
-                    raise IllegalMoveError(
-                        "That square is already occupied by one of your pieces!"
-                    )
-
-                if move_category == MoveCategory.REGULAR:
-                    if square.is_empty:
-                        return True
-                    else:
-                        raise NotationError(
-                            "There is an opponents piece on that square! Do you want to capture it?"
-                        )
-
-                if move_category == MoveCategory.CAPTURE:
-                    if square.is_empty:
-                        if self.is_en_passant_legal(source, target_destination):
-                            return True
-                        raise NotationError(
-                            "You have specified a capture but there isn't a piece on the target square"
-                        )
-                    else:
-                        return True
-
-            else:
-                if not square.is_empty:
-                    return False
-
-        return False
-
     def king_is_in_check(self, colour: Colour) -> bool:
         king_square = self.find_king(colour)
 
@@ -267,27 +226,46 @@ class Board:
                 self.find_source_square(
                     piece_type, king_square, MoveCategory.CAPTURE, other_colour(colour)
                 )
+                return True
             except IllegalMoveError:
-                return False
+                continue
             except AmbiguousMoveError:
-                return False
+                return True
 
-        return True
-
-    def is_en_passant_legal(self, source: Square, destination: Square) -> bool:
-        if source.piece.type == PieceType.PAWN:
-            square = self.get_square(destination.file, source.rank)
-            neighbour_piece = square.piece
-            if (
-                neighbour_piece.type == PieceType.PAWN
-                and neighbour_piece.moves_made == 1
-                and neighbour_piece.last_moved == True
-            ):
-                if source.piece.colour == Colour.WHITE and source.rank == "5":
-                    return True
-                elif source.piece.colour == Colour.BLACK and source.rank == "4":
-                    return True
         return False
+
+    def is_en_passant_legal(self, colour: Colour, destination: Square) -> bool:
+        if int_str_rank_map[destination.rank] == "6" and colour == Colour.WHITE:
+            square = self.get_square(destination.file, destination.rank - 1)
+        elif int_str_rank_map[destination.rank] == "3" and colour == Colour.BLACK:
+            square = self.get_square(destination.file, destination.rank + 1)
+        else:
+            return False
+
+        if (
+            square.piece.type == PieceType.PAWN
+            and square.piece.moves_made == 1
+            and square.piece.last_moved == True
+        ):
+            return True
+        return False
+
+    def check_for_checkmate(self, colour: Colour) -> bool:
+        checkmate = True
+        for square in self.squares.values():
+            for piece_type in PieceType:
+                if piece_type != PieceType.EMPTY:
+                    for move_category in [MoveCategory.REGULAR, MoveCategory.CAPTURE]:
+                        try:
+                            self.find_source_square(
+                                piece_type, square, move_category, colour
+                            )
+                        except IllegalMoveError:
+                            continue
+                        if not self.king_is_in_check(colour):
+                            checkmate = False
+
+        return checkmate
 
 
 if __name__ == "__main__":

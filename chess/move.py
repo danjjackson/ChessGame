@@ -4,7 +4,7 @@ from typing import Protocol
 
 import pydantic
 
-from chess.exceptions import IllegalMoveError, NotationError
+from chess.exceptions import Checkmate, IllegalMoveError, NotationError
 from chess.pieces import FEN_MAP, Piece, PieceType
 from chess.players import Player
 from chess.square import Square
@@ -30,6 +30,12 @@ class Board(Protocol):
         return Square(file, rank)
 
     def king_is_in_check(self, colour: Colour) -> bool:
+        return False
+
+    def is_en_passant_legal(self, colour: Colour, destination: Square) -> bool:
+        return True
+
+    def check_for_checkmate(self, colour: Colour) -> bool:
         return False
 
 
@@ -65,6 +71,27 @@ class Move(pydantic.BaseModel):
     class Config:
         validate_assignment = True
 
+    def validate_move(self, board: Board) -> None:
+        if self.destination.piece.colour == self.player.colour:
+            raise IllegalMoveError(
+                "That square is already occupied by one of your pieces!"
+            )
+
+        if self.move_category == MoveCategory.REGULAR:
+            if not self.destination.is_empty:
+                raise NotationError(
+                    "There is an opponents piece on that square! Do you want to capture it?"
+                )
+
+        if self.move_category == MoveCategory.CAPTURE:
+            if self.destination.is_empty:
+                if self.piece_type != PieceType.PAWN or not board.is_en_passant_legal(
+                    self.player.colour, self.destination
+                ):
+                    raise NotationError(
+                        "You have specified a capture but there isn't a piece on the target square"
+                    )
+
     def complete_move(
         self,
         board: Board,
@@ -94,6 +121,8 @@ class Move(pydantic.BaseModel):
             self.player.pieces_captured.append(captured_piece)
 
         source.move_piece(destination)
+        # print(board.king_is_in_check(self.player.colour))
+        # print(board.king_is_in_check(other_colour(self.player.colour)))
 
         if board.king_is_in_check(self.player.colour):
             destination.move_piece(source, undo=True)
@@ -104,6 +133,10 @@ class Move(pydantic.BaseModel):
                     destination.piece = captured_piece
                 self.player.pieces_captured.pop()
             raise IllegalMoveError("Your king is in check!")
+
+        if board.king_is_in_check(other_colour(self.player.colour)):
+            if board.check_for_checkmate(other_colour(self.player.colour)):
+                raise Checkmate("GAME OVER")
 
 
 def parse_move(board: Board, player: Player) -> list[Move]:
@@ -200,3 +233,10 @@ def parse_move(board: Board, player: Player) -> list[Move]:
         raise NotationError(message="That is an invalid move!")
 
     return [test_move]
+
+
+def other_colour(colour: Colour) -> Colour:
+    if colour == Colour.WHITE:
+        return Colour.BLACK
+    else:
+        return Colour.WHITE

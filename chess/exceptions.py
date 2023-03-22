@@ -33,3 +33,13 @@ class NotationError(Exception):
 
     def __str__(self):
         return self.message
+
+
+class Checkmate(Exception):
+    def __init__(self, message: str) -> None:
+        # self.value = value
+        self.message = message
+        super().__init__(message)
+
+    def __str__(self):
+        return self.message

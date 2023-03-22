@@ -2,7 +2,8 @@ from chess.game import ChessGame
 
 
 def main() -> None:
-    chess = ChessGame()
+    test = "4K3/7q/4k3/8/8/8/8/8"
+    chess = ChessGame(test)
     chess.play()
 
 

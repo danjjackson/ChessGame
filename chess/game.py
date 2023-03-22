@@ -1,5 +1,5 @@
 from chess.board import Board
-from chess.exceptions import IllegalMoveError, NotationError
+from chess.exceptions import Checkmate, IllegalMoveError, NotationError
 from chess.move import parse_move
 from chess.pieces import Colour
 from chess.players import Player
@@ -16,8 +16,9 @@ def alternate_players(white_player, black_player, start: Colour = Colour.WHITE):
             yield white_player
 
 
-class ChessGame
+class ChessGame:
     def __init__(self, fen_string: str = "rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"):
+        self.game_over = False
         self.white_player = Player("Daniel", "Jackson", 2200, Colour.WHITE)
         self.black_player = Player("Caitlin", "Duschenes", 1100, Colour.BLACK)
         self.player_alternator = alternate_players(
@@ -30,7 +31,7 @@ class ChessGame
 
     def play(self) -> None:
         self.show_board()
-        while True:
+        while not self.game_over:
             print(f"{self.player.colour} player: Please enter a move!")
             try:
                 moves = parse_move(self.board, self.player)
@@ -38,6 +39,15 @@ class ChessGame
                 print(e.message)
                 continue
             for move in moves:
+                try:
+                    move.validate_move(self.board)
+                except IllegalMoveError as e:
+                    print(e.message)
+                    break
+                except NotationError as e:
+                    print(e.message)
+                    break
+
                 try:
                     source_square = self.board.find_source_square(
                         move.piece_type,
@@ -57,7 +67,11 @@ class ChessGame
                 except IllegalMoveError as e:
                     print(e.message)
                     break
-
+                except Checkmate as e:
+                    print(e.message)
+                    self.game_over = True
+                    break
+            else:
                 self.board.set_last_moved(moves[0].destination)
                 self.player = next(self.player_alternator)
                 self.board.orientation = self.player.colour
