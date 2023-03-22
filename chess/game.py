@@ -1,8 +1,8 @@
 from chess.board import Board
 from chess.exceptions import Checkmate, IllegalMoveError, NotationError
-from chess.move import parse_move
 from chess.pieces import Colour
 from chess.players import Player
+from chess.ui import CLI
 
 
 def alternate_players(white_player, black_player, start: Colour = Colour.WHITE):
@@ -17,10 +17,12 @@ def alternate_players(white_player, black_player, start: Colour = Colour.WHITE):
 
 
 class ChessGame:
-    def __init__(self, white_player: Player, black_player: Player, board: Board):
+    def __init__(
+        self, white_player: Player, black_player: Player, board: Board, ui: CLI
+    ):
         self.white_player = white_player
         self.black_player = black_player
-
+        self.ui = ui
         self.board = board
 
         self.player_alternator = alternate_players(
@@ -30,11 +32,13 @@ class ChessGame:
 
     def play(self) -> None:
         game_over = False
-        self.show_board()
+        self.ui.show_board(
+            self.board, self.white_player, self.black_player, self.player.colour
+        )
         while not game_over:
-            print(f"{self.player.colour} player: Please enter a move!")
+            move = self.ui.move_prompt(self.player.colour)
             try:
-                moves = parse_move(self.board, self.player)
+                moves = self.ui.parse_move(move, self.board, self.player)
             except NotationError as e:
                 print(e.message)
                 continue
@@ -74,14 +78,6 @@ class ChessGame:
             else:
                 self.board.set_last_moved(moves[0].destination)
                 self.player = next(self.player_alternator)
-                self.board.orientation = self.player.colour
-                self.show_board()
-
-    def show_board(self):
-        print(self.black_player) if self.player.colour == Colour.WHITE else print(
-            self.white_player
-        )
-        print(self.board)
-        print(self.white_player) if self.player.colour == Colour.WHITE else print(
-            self.black_player
-        )
+                self.ui.show_board(
+                    self.board, self.white_player, self.black_player, self.player.colour
+                )

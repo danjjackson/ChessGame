@@ -37,11 +37,3 @@ class Player:
         return f"{self.first_name} {self.last_name} ({self.rating})" + (
             " {}" * len(self.pieces_captured)
         ).format(*self.pieces_captured)
-
-    @staticmethod
-    def make_player(colour: Colour) -> Player:
-        first_name = input("Enter your first name: ")
-        last_name = input("Enter your last name: ")
-        rating = int(input("Enter your rating: "))
-
-        return Player(first_name, last_name, rating, colour)

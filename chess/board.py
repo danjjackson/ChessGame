@@ -12,7 +12,7 @@ from chess.moves import (
 )
 from chess.pieces import Piece, PieceType
 from chess.square import Square
-from chess.utils import Colour, MoveCategory
+from chess.utils import Colour, MoveCategory, other_colour
 
 Position = tuple[int, int]
 Grid = dict[Position, Square]
@@ -28,15 +28,11 @@ def empty_board() -> Grid:
 
 @dataclass
 class Board:
-    orientation: Colour
     squares: Grid = field(default_factory=empty_board)
 
     @staticmethod
-    def from_fen(
-        fen: str = "rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R",
-        turn: Colour = Colour.WHITE,
-    ) -> Board:
-        board = Board(orientation=turn)
+    def from_fen(fen: str = "rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R") -> Board:
+        board = Board()
         fenlist = fen.split("/")
 
         for ind_rank, rank in enumerate(fenlist):
@@ -101,9 +97,9 @@ class Board:
             else:
                 square.piece.last_moved = False
 
-    def __str__(self) -> str:
+    def board_string(self, orientation: Colour) -> str:
         board_repr = ""
-        if self.orientation == Colour.WHITE:
+        if orientation == Colour.WHITE:
             for rank in "87654321":
                 for file in "abcdefgh":
                     board_repr = (
@@ -161,8 +157,6 @@ class Board:
             for orientation in [Colour.WHITE, Colour.BLACK]:
                 for move_func in move_funcs:
                     source = destination
-                    # if source.piece.colour == colour:
-                    #     raise IllegalMoveError("There's already a piece on that square")
                     move_distance = 0
                     while move_distance < 7:
                         try:
@@ -212,12 +206,6 @@ class Board:
 
     def king_is_in_check(self, colour: Colour) -> bool:
         king_square = self.find_king(colour)
-
-        def other_colour(colour: Colour) -> Colour:
-            if colour == Colour.WHITE:
-                return Colour.BLACK
-            else:
-                return Colour.WHITE
 
         for piece_type in PieceType:
             if piece_type == PieceType.EMPTY:
