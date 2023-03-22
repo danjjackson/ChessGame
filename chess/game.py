@@ -17,21 +17,21 @@ def alternate_players(white_player, black_player, start: Colour = Colour.WHITE):
 
 
 class ChessGame:
-    def __init__(self, fen_string: str = "rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"):
-        self.game_over = False
-        self.white_player = Player("Daniel", "Jackson", 2200, Colour.WHITE)
-        self.black_player = Player("Caitlin", "Duschenes", 1100, Colour.BLACK)
+    def __init__(self, white_player: Player, black_player: Player, board: Board):
+        self.white_player = white_player
+        self.black_player = black_player
+
+        self.board = board
+
         self.player_alternator = alternate_players(
             self.white_player, self.black_player, Colour.WHITE
         )
         self.player = next(self.player_alternator)
-        self.board = Board.from_fen(fen_string, self.player.colour)
-
-        self.play()
 
     def play(self) -> None:
+        game_over = False
         self.show_board()
-        while not self.game_over:
+        while not game_over:
             print(f"{self.player.colour} player: Please enter a move!")
             try:
                 moves = parse_move(self.board, self.player)
@@ -69,7 +69,7 @@ class ChessGame:
                     break
                 except Checkmate as e:
                     print(e.message)
-                    self.game_over = True
+                    game_over = True
                     break
             else:
                 self.board.set_last_moved(moves[0].destination)
