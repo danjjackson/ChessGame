@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Literal, Protocol
 
 import pydantic
 
@@ -29,13 +29,15 @@ class Board(Protocol):
         """Returns the piece at position (x, y)."""
         return Square(file, rank)
 
-    def king_is_in_check(self, colour: Colour) -> bool:
+    def king_is_in_check(self, colour: Literal[Colour.WHITE, Colour.BLACK]) -> bool:
         return False
 
-    def is_en_passant_legal(self, colour: Colour, destination: Square) -> bool:
+    def is_en_passant_legal(
+        self, colour: Literal[Colour.WHITE, Colour.BLACK], destination: Square
+    ) -> bool:
         return True
 
-    def check_for_checkmate(self, colour: Colour) -> bool:
+    def check_for_checkmate(self, colour: Literal[Colour.WHITE, Colour.BLACK]) -> bool:
         return False
 
 

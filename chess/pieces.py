@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
-from chess.utils import Colour
+from chess.utils import Colour, MoveCategory
 
 
 class PieceType(Enum):
@@ -40,11 +41,13 @@ FEN_MAP: dict[str, PieceType] = {
 class Piece:
     colour: Colour = Colour.BLANK
     type: PieceType = PieceType.EMPTY
-    orientation: list[Colour] = field(default_factory=list)
-    move_limit: int = 7
-    capture_limit: int = 7
+    move_limit: dict[MoveCategory, int] = {
+        MoveCategory.CAPTURE: 7,
+        MoveCategory.REGULAR: 7,
+    }
     moves_made: int = 0
     last_moved: bool = False
+    direction: Optional[Colour] = None
 
     @property
     def has_moved(self) -> bool:
@@ -54,16 +57,16 @@ class Piece:
         self.moves_made += 1
         self.last_moved = True
         if self.type == PieceType.PAWN:
-            self.move_limit = 1
+            self.move_limit[MoveCategory.REGULAR] = 1
 
     def undo(self):
         self.moves_made -= 1
         self.last_moved = False
         if self.type == PieceType.PAWN and self.moves_made == 0:
-            self.move_limit = 2
+            self.move_limit[MoveCategory.REGULAR] = 2
 
-    def promote_to(self, piece: PieceType) -> None:
-        self.type = piece
+    def promote_to(self, piece_type: PieceType) -> None:
+        self.type = piece_type
 
     @staticmethod
     def from_fen(fen: str) -> Piece:
@@ -73,13 +76,21 @@ class Piece:
             [colour] if type == PieceType.PAWN else [Colour.WHITE, Colour.BLACK]
         )
         if type == PieceType.PAWN:
-            move_limit = 2
+            move_limit = {
+                MoveCategory.CAPTURE: 1,
+                MoveCategory.REGULAR: 2,
+            }
         elif type == PieceType.KING:
-            move_limit = 1
+            move_limit = {
+                MoveCategory.CAPTURE: 1,
+                MoveCategory.REGULAR: 1,
+            }
         else:
-            move_limit = 7
-        capture_limit = 1 if type == PieceType.PAWN or type == PieceType.KING else 7
-        return Piece(colour, type, orientation, move_limit, capture_limit)
+            move_limit = {
+                MoveCategory.CAPTURE: 7,
+                MoveCategory.REGULAR: 7,
+            }
+        return Piece(colour, type, move_limit)
 
     def __str__(self):
         return PIECE_STR[self.type][self.colour.value]

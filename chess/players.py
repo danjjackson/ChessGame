@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Self
+from typing import Literal
 
 from chess.pieces import Piece, PieceType
 from chess.utils import Colour
@@ -21,7 +21,7 @@ class Player:
     first_name: str
     last_name: str
     rating: int
-    colour: Colour = Colour.WHITE
+    colour: Literal[Colour.WHITE, Colour.BLACK] = Colour.WHITE
     pieces_captured: list[Piece] = field(default_factory=list)
 
     def clean_pieces_captured_list(self):

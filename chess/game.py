@@ -36,9 +36,9 @@ class ChessGame:
             self.board, self.white_player, self.black_player, self.player.colour
         )
         while not game_over:
-            move = self.ui.move_prompt(self.player.colour)
+            move_string = self.ui.move_prompt(self.player.colour)
             try:
-                moves = self.ui.parse_move(move, self.board, self.player)
+                moves = self.ui.parse_move(move_string, self.board, self.player)
             except NotationError as e:
                 print(e.message)
                 continue
@@ -52,14 +52,15 @@ class ChessGame:
                     print(e.message)
                     break
 
+                possible_source_squares = self.board.find_source_square(
+                    move.piece_type,
+                    move.destination,
+                    move.move_category,
+                    self.player.colour,
+                )
                 try:
-                    source_square = self.board.find_source_square(
-                        move.piece_type,
-                        move.destination,
-                        move.move_category,
-                        self.player.colour,
-                        move.src_file,
-                        move.src_rank,
+                    source_square = self.board.validate_source_squares(
+                        possible_source_squares
                     )
                 except IllegalMoveError as e:
                     print(e.message)

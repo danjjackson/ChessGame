@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 from chess.exceptions import AmbiguousMoveError, IllegalMoveError, OutOfBoundsError
 from chess.move import int_str_file_map, int_str_rank_map, position_map
 from chess.moves import (
-    MOVEMENT_MAP,
     get_knight_squares,
+    get_neighbour_function,
     is_long_castle_valid,
     is_short_castle_valid,
 )
@@ -122,10 +123,8 @@ class Board:
         piece_type: PieceType,
         destination: Square,
         move_category: MoveCategory,
-        colour: Colour,
-        src_file: str = "abcdefgh",
-        src_rank: str = "12345678",
-    ) -> Square:
+        colour: Literal[Colour.WHITE, Colour.BLACK],
+    ) -> list[Square]:
         possible_source_squares: list[Square] = []
 
         if move_category == MoveCategory.SHORT_CASTLE:
@@ -136,8 +135,9 @@ class Board:
             elif piece_type == PieceType.ROOK:
                 rook_square = self.get_square(destination.file + 2, destination.rank)
                 possible_source_squares.append(rook_square)
+            return possible_source_squares
 
-        elif move_category == MoveCategory.LONG_CASTLE:
+        if move_category == MoveCategory.LONG_CASTLE:
             if piece_type == PieceType.KING:
                 king_square = self.find_king(colour)
                 if is_long_castle_valid(self, king_square):
@@ -145,66 +145,66 @@ class Board:
             elif piece_type == PieceType.ROOK:
                 rook_square = self.get_square(destination.file - 3, destination.rank)
                 possible_source_squares.append(rook_square)
+            return possible_source_squares
 
-        elif piece_type == PieceType.KNIGHT:
+        if piece_type == PieceType.KNIGHT:
             knight_squares = get_knight_squares(self, destination)
             for square in knight_squares:
-                if self.valid_move(square, colour, piece_type, src_file, src_rank):
+                if self.valid_move(square, colour, piece_type, 0, move_category):
                     possible_source_squares.append(square)
+            return possible_source_squares
 
-        else:
-            move_funcs = MOVEMENT_MAP[piece_type][move_category]
-            for orientation in [Colour.WHITE, Colour.BLACK]:
-                for move_func in move_funcs:
-                    source = destination
-                    move_distance = 0
-                    while move_distance < 7:
-                        try:
-                            neighbour = move_func(self, source, orientation)
-                        except OutOfBoundsError:
-                            break
-                        if neighbour.piece.type == PieceType.EMPTY:
-                            source = neighbour
-                            move_distance += 1
-                            continue
-                        elif self.valid_move(
-                            neighbour,
-                            colour,
-                            piece_type,
-                            src_file,
-                            src_rank,
-                        ):
-                            possible_source_squares.append(neighbour)
-                            break
-                        else:
-                            break
+        neighbour_funcs = get_neighbour_function(piece_type, colour, move_category)
+        for neighbour_func in neighbour_funcs:
+            source = destination
+            move_distance = 1
+            while True:
+                try:
+                    neighbour = neighbour_func(self, source)
+                except OutOfBoundsError:
+                    break
+                if neighbour.piece.type == PieceType.EMPTY:
+                    source = neighbour
+                    move_distance += 1
+                    continue
+                elif self.valid_move(
+                    neighbour,
+                    colour,
+                    piece_type,
+                    move_distance,
+                    move_category,
+                ):
+                    possible_source_squares.append(neighbour)
+                    break
+                else:
+                    break
+        return possible_source_squares
 
-        if not len(possible_source_squares):
-            raise IllegalMoveError(
-                f"{str(destination)} is not reachable by a {colour} {piece_type.value}"
-            )
-        elif len(possible_source_squares) > 1:
+    def validate_source_squares(self, squares):
+        if not len(squares):
+            raise IllegalMoveError("That is not a valid move!")
+        elif len(squares) > 1:
             raise AmbiguousMoveError(
                 f"There is more than one possible move! Please clarify."
             )
-        return possible_source_squares[0]
+
+        return squares[0]
 
     def valid_move(
         self,
-        destination: Square,
-        colour: Colour,
-        piece_type: PieceType,
-        source_file: str,
-        source_rank: str,
+        possible_source: Square,
+        target_colour: Colour,
+        target_piece_type: PieceType,
+        move_distance: int,
+        move_category: MoveCategory,
     ) -> bool:
         return (
-            destination.piece.type == piece_type
-            and destination.piece.colour == colour
-            and int_str_file_map[destination.file] in source_file
-            and int_str_rank_map[destination.rank] in source_rank
+            possible_source.piece.type == target_piece_type
+            and possible_source.piece.colour == target_colour
+            and move_distance <= possible_source.piece.move_limit[move_category]
         )
 
-    def king_is_in_check(self, colour: Colour) -> bool:
+    def king_is_in_check(self, colour: Literal[Colour.WHITE, Colour.BLACK]) -> bool:
         king_square = self.find_king(colour)
 
         for piece_type in PieceType:
@@ -238,7 +238,7 @@ class Board:
             return True
         return False
 
-    def check_for_checkmate(self, colour: Colour) -> bool:
+    def check_for_checkmate(self, colour: Literal[Colour.WHITE, Colour.BLACK]) -> bool:
         checkmate = True
         for square in self.squares.values():
             for piece_type in PieceType:
@@ -254,8 +254,3 @@ class Board:
                             checkmate = False
 
         return checkmate
-
-
-if __name__ == "__main__":
-    board = Board.from_fen()
-    # print(board)

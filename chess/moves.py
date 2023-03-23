@@ -1,4 +1,4 @@
-from typing import Callable, Protocol
+from typing import Callable, Literal, Protocol
 
 from chess.exceptions import IllegalMoveError, OutOfBoundsError
 from chess.pieces import PieceType
@@ -8,44 +8,39 @@ from chess.utils import Colour, MoveCategory
 
 class Board(Protocol):
     def get_square(self, file: int, rank: int) -> Square:
-        """Returns the piece at position (x, y)."""
-        return Square(file, rank)
+        raise NotImplementedError
 
 
-def get_vertical_neighbour(board: Board, square: Square, direction: Colour) -> Square:
-    return (
-        board.get_square(square.file, square.rank - 1)
-        if direction == Colour.WHITE
-        else board.get_square(square.file, square.rank + 1)
-    )
+def get_DS_neighbour(board: Board, square: Square) -> Square:
+    return board.get_square(square.file, square.rank + 1)
 
 
-def get_horizontal_neighbour(board: Board, square: Square, direction: Colour) -> Square:
-    return (
-        board.get_square(square.file - 1, square.rank)
-        if direction == Colour.WHITE
-        else board.get_square(square.file + 1, square.rank)
-    )
+def get_US_neighbour(board: Board, square: Square) -> Square:
+    return board.get_square(square.file, square.rank - 1)
 
 
-def get_positive_diagonal_neighbour(
-    board: Board, square: Square, direction: Colour
-) -> Square:
-    return (
-        board.get_square(square.file - 1, square.rank - 1)
-        if direction == Colour.WHITE
-        else board.get_square(square.file + 1, square.rank + 1)
-    )
+def get_SL_neighbour(board: Board, square: Square) -> Square:
+    return board.get_square(square.file - 1, square.rank)
 
 
-def get_negative_diagonal_neighbour(
-    board: Board, square: Square, orientation: Colour
-) -> Square:
-    return (
-        board.get_square(square.file + 1, square.rank - 1)
-        if orientation == Colour.WHITE
-        else board.get_square(square.file - 1, square.rank + 1)
-    )
+def get_SR_neighbour(board: Board, square: Square) -> Square:
+    return board.get_square(square.file + 1, square.rank)
+
+
+def get_DSR_neighbour(board: Board, square: Square) -> Square:
+    return board.get_square(square.file + 1, square.rank + 1)
+
+
+def get_DSL_neighbour(board: Board, square: Square) -> Square:
+    return board.get_square(square.file - 1, square.rank + 1)
+
+
+def get_USL_neighbour(board: Board, square: Square) -> Square:
+    return board.get_square(square.file - 1, square.rank - 1)
+
+
+def get_USR_neighbour(board: Board, square: Square) -> Square:
+    return board.get_square(square.file + 1, square.rank - 1)
 
 
 def get_knight_squares(board: Board, square: Square) -> list[Square]:
@@ -118,105 +113,59 @@ def is_long_castle_valid(board: Board, source: Square) -> bool:
     return True
 
 
-NeighbourCalculator = Callable[[Board, Square, Colour], Square]
+NeighbourCalculator = Callable[[Board, Square], Square]
 
 
-MOVEMENT_MAP: dict[PieceType, dict[MoveCategory, list[NeighbourCalculator]]] = {
-    PieceType.PAWN: {
-        MoveCategory.REGULAR: [get_vertical_neighbour],
-        MoveCategory.CAPTURE: [
-            get_positive_diagonal_neighbour,
-            get_negative_diagonal_neighbour,
-        ],
-    },
-    PieceType.ROOK: {
-        MoveCategory.REGULAR: [get_vertical_neighbour, get_horizontal_neighbour],
-        MoveCategory.CAPTURE: [get_vertical_neighbour, get_horizontal_neighbour],
-    },
-    PieceType.BISHOP: {
-        MoveCategory.REGULAR: [
-            get_positive_diagonal_neighbour,
-            get_negative_diagonal_neighbour,
-        ],
-        MoveCategory.CAPTURE: [
-            get_positive_diagonal_neighbour,
-            get_negative_diagonal_neighbour,
-        ],
-    },
-    PieceType.QUEEN: {
-        MoveCategory.REGULAR: [
-            get_positive_diagonal_neighbour,
-            get_negative_diagonal_neighbour,
-            get_vertical_neighbour,
-            get_horizontal_neighbour,
-        ],
-        MoveCategory.CAPTURE: [
-            get_positive_diagonal_neighbour,
-            get_negative_diagonal_neighbour,
-            get_vertical_neighbour,
-            get_horizontal_neighbour,
-        ],
-    },
-    PieceType.KING: {
-        MoveCategory.REGULAR: [
-            get_positive_diagonal_neighbour,
-            get_negative_diagonal_neighbour,
-            get_vertical_neighbour,
-            get_horizontal_neighbour,
-        ],
-        MoveCategory.CAPTURE: [
-            get_positive_diagonal_neighbour,
-            get_negative_diagonal_neighbour,
-            get_vertical_neighbour,
-            get_horizontal_neighbour,
-        ],
-    },
+def get_neighbour_function(
+    piece_type: PieceType,
+    colour: Literal[Colour.WHITE, Colour.BLACK],
+    move_category: Literal[MoveCategory.CAPTURE, MoveCategory.REGULAR],
+) -> list[NeighbourCalculator]:
+    if piece_type == PieceType.PAWN:
+        if move_category == MoveCategory.REGULAR:
+            return [get_DS_neighbour] if colour == Colour.WHITE else [get_US_neighbour]
+        if move_category == MoveCategory.CAPTURE:
+            return (
+                [get_DSR_neighbour, get_DSL_neighbour]
+                if colour == Colour.WHITE
+                else [get_USR_neighbour, get_USL_neighbour]
+            )
+
+    else:
+        return PIECE_MOVEMENT[piece_type]
+
+
+PIECE_MOVEMENT: dict[PieceType, list[NeighbourCalculator]] = {
+    PieceType.BISHOP: [
+        get_DSL_neighbour,
+        get_DSR_neighbour,
+        get_USR_neighbour,
+        get_DSL_neighbour,
+    ],
+    PieceType.ROOK: [
+        get_SL_neighbour,
+        get_SR_neighbour,
+        get_US_neighbour,
+        get_DS_neighbour,
+    ],
+    PieceType.QUEEN: [
+        get_SL_neighbour,
+        get_SR_neighbour,
+        get_US_neighbour,
+        get_DS_neighbour,
+        get_DSL_neighbour,
+        get_DSR_neighbour,
+        get_USR_neighbour,
+        get_DSL_neighbour,
+    ],
+    PieceType.KING: [
+        get_SL_neighbour,
+        get_SR_neighbour,
+        get_US_neighbour,
+        get_DS_neighbour,
+        get_DSL_neighbour,
+        get_DSR_neighbour,
+        get_USR_neighbour,
+        get_DSL_neighbour,
+    ],
 }
-# MOVEMENT_MAP: dict[PieceType, dict[MoveCategory, list[NeighbourCalculator]]] = {
-#     PieceType.PAWN: {
-#         MoveCategory.REGULAR: [get_rank],
-#         MoveCategory.CAPTURE: [get_forwards_diagonals],
-#     },
-#     PieceType.ROOK: {
-#         MoveCategory.REGULAR: [get_rank, get_file],
-#         MoveCategory.CAPTURE: [get_rank, get_file],
-#     },
-#     PieceType.BISHOP: {
-#         MoveCategory.REGULAR: [
-#             get_forwards_diagonals,
-#             get_backwards_diagonals,
-#         ],
-#         MoveCategory.CAPTURE: [
-#             get_forwards_diagonals,
-#             get_backwards_diagonals,
-#         ],
-#     },
-#     PieceType.QUEEN: {
-#         MoveCategory.REGULAR: [
-#             get_file,
-#             get_rank,
-#             get_forwards_diagonals,
-#             get_backwards_diagonals,
-#         ],
-#         MoveCategory.CAPTURE: [
-#             get_file,
-#             get_rank,
-#             get_forwards_diagonals,
-#             get_backwards_diagonals,
-#         ],
-#     },
-#     PieceType.KING: {
-#         MoveCategory.REGULAR: [
-#             get_file,
-#             get_rank,
-#             get_forwards_diagonals,
-#             get_backwards_diagonals,
-#         ],
-#         MoveCategory.CAPTURE: [
-#             get_file,
-#             get_rank,
-#             get_forwards_diagonals,
-#             get_backwards_diagonals,
-#         ],
-#     },
-# }

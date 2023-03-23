@@ -1,3 +1,5 @@
+from typing import Literal
+
 from chess.board import Board
 from chess.exceptions import NotationError
 from chess.move import Move, MoveCategory
@@ -8,7 +10,7 @@ from chess.utils import Colour, position_map
 
 class CLI:
     @staticmethod
-    def make_player(colour: Colour) -> Player:
+    def make_player(colour: Literal[Colour.WHITE, Colour.BLACK]) -> Player:
         first_name = input("Enter your first name: ")
         last_name = input("Enter your last name: ")
         rating = int(input("Enter your rating: "))
@@ -110,7 +112,7 @@ class CLI:
         return [test_move]
 
     def move_prompt(self, colour):
-        move = input(f"{colour} player: Please enter a move!")
+        move = input(f"{colour} player: Please enter a move: ")
         return move
 
     def show_board(
