@@ -5,7 +5,7 @@ from chess.utils import Colour
 
 
 def main() -> None:
-    fen_str = "4K3/7q/4k3/8/8/8/8/8"
+    fen_str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
     cli = CLI()
     white_player = cli.make_player(Colour.WHITE)
     black_player = cli.make_player(Colour.BLACK)

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Literal, Protocol
+from typing import Literal, Optional, Protocol
 
 import pydantic
 
 from chess.exceptions import Checkmate, IllegalMoveError, NotationError
-from chess.pieces import FEN_MAP, Piece, PieceType
+from chess.pieces import FEN_MAP, PieceType
 from chess.players import Player
 from chess.square import Square
 from chess.utils import Colour, MoveCategory, other_colour
@@ -43,12 +43,14 @@ class Board(Protocol):
 
 class Move(pydantic.BaseModel):
     player: Player
-    piece_type: PieceType = PieceType.EMPTY
-    destination: Square = Square()
-    move_category: MoveCategory = MoveCategory.REGULAR
+    piece_type: PieceType
+    destination: Square
+    move_category: MoveCategory
     src_file: str = "abcdefgh"
     src_rank: str = "12345678"
     promote_to: PieceType = PieceType.EMPTY
+    castle_rook_origin: Optional[Square] = None
+    castle_rook_destination: Optional[Square] = None
 
     @pydantic.validator("src_file")
     @classmethod
@@ -98,41 +100,43 @@ class Move(pydantic.BaseModel):
         self,
         board: Board,
         source: Square,
-        destination: Square,
-        move_category: MoveCategory,
     ) -> None:
         if (
-            move_category == MoveCategory.SHORT_CASTLE
-            or move_category == MoveCategory.LONG_CASTLE
+            self.move_category == MoveCategory.SHORT_CASTLE
+            or self.move_category == MoveCategory.LONG_CASTLE
         ):
             if board.king_is_in_check(self.player.colour):
                 raise IllegalMoveError("You cannot castle out of check!")
 
-        captured_piece = Piece()
         en_passant = False
-        en_passanted_square = board.get_square(destination.file, source.rank)
+        en_passanted_square = board.get_square(self.destination.file, source.rank)
 
-        if move_category == MoveCategory.CAPTURE:
-            if destination.is_empty:
+        if self.move_category == MoveCategory.CAPTURE:
+            if self.destination.is_empty:
                 en_passant = True
                 captured_piece = en_passanted_square.piece
                 en_passanted_square.empty()
             else:
-                captured_piece = destination.piece
-
+                captured_piece = self.destination.piece
             self.player.pieces_captured.append(captured_piece)
 
-        source.move_piece(destination)
+        source.move_piece(self.destination)
 
         if board.king_is_in_check(self.player.colour):
-            destination.move_piece(source, undo=True)
-            if move_category == MoveCategory.CAPTURE:
+            self.destination.move_piece(source, undo=True)
+            if self.move_category == MoveCategory.CAPTURE:
                 if en_passant:
-                    en_passanted_square.piece = captured_piece
+                    en_passanted_square.piece = self.player.pieces_captured.pop()
                 else:
-                    destination.piece = captured_piece
+                    self.destination.piece = self.player.pieces_captured.pop()
                 self.player.pieces_captured.pop()
             raise IllegalMoveError("Your king is in check!")
+
+        if (
+            self.castle_rook_origin is not None
+            and self.castle_rook_destination is not None
+        ):
+            self.castle_rook_origin.move_piece(self.castle_rook_destination)
 
         if board.king_is_in_check(other_colour(self.player.colour)):
             if board.check_for_checkmate(other_colour(self.player.colour)):

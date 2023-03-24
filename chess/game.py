@@ -38,46 +38,43 @@ class ChessGame:
         while not game_over:
             move_string = self.ui.move_prompt(self.player.colour)
             try:
-                moves = self.ui.parse_move(move_string, self.board, self.player)
+                move = self.ui.parse_move(move_string, self.board, self.player)
             except NotationError as e:
                 print(e.message)
                 continue
-            for move in moves:
-                try:
-                    move.validate_move(self.board)
-                except IllegalMoveError as e:
-                    print(e.message)
-                    break
-                except NotationError as e:
-                    print(e.message)
-                    break
+            try:
+                move.validate_move(self.board)
+            except IllegalMoveError as e:
+                print(e.message)
+                continue
+            except NotationError as e:
+                print(e.message)
+                continue
 
-                possible_source_squares = self.board.find_source_square(
-                    move.piece_type,
-                    move.destination,
-                    move.move_category,
-                    self.player.colour,
+            possible_origin_squares = self.board.find_origin_squares(
+                move.piece_type,
+                move.destination,
+                move.move_category,
+                self.player.colour,
+            )
+            try:
+                source_square = self.board.validate_origin_squares(
+                    possible_origin_squares, move.src_file, move.src_rank
                 )
-                try:
-                    source_square = self.board.validate_source_squares(
-                        possible_source_squares
-                    )
-                except IllegalMoveError as e:
-                    print(e.message)
-                    break
-                try:
-                    move.complete_move(
-                        self.board, source_square, move.destination, move.move_category
-                    )
-                except IllegalMoveError as e:
-                    print(e.message)
-                    break
-                except Checkmate as e:
-                    print(e.message)
-                    game_over = True
-                    break
+            except IllegalMoveError as e:
+                print(e.message)
+                continue
+            try:
+                move.complete_move(self.board, source_square)
+            except IllegalMoveError as e:
+                print(e.message)
+                continue
+            except Checkmate as e:
+                print(e.message)
+                game_over = True
+                break
             else:
-                self.board.set_last_moved(moves[0].destination)
+                self.board.set_last_moved(move.destination)
                 self.player = next(self.player_alternator)
                 self.ui.show_board(
                     self.board, self.white_player, self.black_player, self.player.colour

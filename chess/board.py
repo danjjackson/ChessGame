@@ -32,7 +32,7 @@ class Board:
     squares: Grid = field(default_factory=empty_board)
 
     @staticmethod
-    def from_fen(fen: str = "rnbqk2r/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R") -> Board:
+    def from_fen(fen: str) -> Board:
         board = Board()
         fenlist = fen.split("/")
 
@@ -100,59 +100,56 @@ class Board:
 
     def board_string(self, orientation: Colour) -> str:
         board_repr = ""
+
         if orientation == Colour.WHITE:
             for rank in "87654321":
                 for file in "abcdefgh":
-                    board_repr = (
-                        board_repr
-                        + f"| {str(self.squares[position_map[(file, rank)]].piece)} "
-                    )
+                    piece_str = self.squares[position_map[(file, rank)]].piece
+                    board_repr = board_repr + f"| {str(piece_str)} "
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
         else:
             for rank in "12345678":
                 for file in "hgfedcba":
-                    board_repr = (
-                        board_repr
-                        + f"| {str(self.squares[position_map[(file, rank)]].piece)} "
-                    )
+                    piece_str = self.squares[position_map[(file, rank)]].piece
+                    board_repr = board_repr + f"| {str(piece_str)} "
                 board_repr = board_repr + "|\n  _   _   _   _   _   _   _   _\n"
         return board_repr[:-1]
 
-    def find_source_square(
+    def find_origin_squares(
         self,
         piece_type: PieceType,
         destination: Square,
         move_category: MoveCategory,
         colour: Literal[Colour.WHITE, Colour.BLACK],
     ) -> list[Square]:
-        possible_source_squares: list[Square] = []
+        possible_origin_squares: list[Square] = []
 
         if move_category == MoveCategory.SHORT_CASTLE:
             if piece_type == PieceType.KING:
                 king_square = self.find_king(colour)
                 if is_short_castle_valid(self, king_square):
-                    possible_source_squares.append(king_square)
+                    possible_origin_squares.append(king_square)
             elif piece_type == PieceType.ROOK:
                 rook_square = self.get_square(destination.file + 2, destination.rank)
-                possible_source_squares.append(rook_square)
-            return possible_source_squares
+                possible_origin_squares.append(rook_square)
+            return possible_origin_squares
 
         if move_category == MoveCategory.LONG_CASTLE:
             if piece_type == PieceType.KING:
                 king_square = self.find_king(colour)
                 if is_long_castle_valid(self, king_square):
-                    possible_source_squares.append(king_square)
+                    possible_origin_squares.append(king_square)
             elif piece_type == PieceType.ROOK:
                 rook_square = self.get_square(destination.file - 3, destination.rank)
-                possible_source_squares.append(rook_square)
-            return possible_source_squares
+                possible_origin_squares.append(rook_square)
+            return possible_origin_squares
 
         if piece_type == PieceType.KNIGHT:
             knight_squares = get_knight_squares(self, destination)
             for square in knight_squares:
-                if self.valid_move(square, colour, piece_type, 0, move_category):
-                    possible_source_squares.append(square)
-            return possible_source_squares
+                if self.valid_move(square, piece_type, colour, move_category):
+                    possible_origin_squares.append(square)
+            return possible_origin_squares
 
         neighbour_funcs = get_neighbour_function(piece_type, colour, move_category)
         for neighbour_func in neighbour_funcs:
@@ -169,39 +166,60 @@ class Board:
                     continue
                 elif self.valid_move(
                     neighbour,
-                    colour,
                     piece_type,
-                    move_distance,
+                    colour,
                     move_category,
+                    move_distance,
                 ):
-                    possible_source_squares.append(neighbour)
+                    possible_origin_squares.append(neighbour)
                     break
                 else:
                     break
-        return possible_source_squares
+        return possible_origin_squares
 
-    def validate_source_squares(self, squares):
-        if not len(squares):
+    def validate_origin_squares(
+        self,
+        squares: list[Square],
+        origin_file: str = "abcdefgh",
+        origin_rank: str = "12345678",
+    ) -> Square:
+        # If there's only one possible origin square, then just return that square
+        if len(squares) == 1:
+            return squares[0]
+
+        # If there are multiple origin squares, check each one to see if it matches the
+        # extra info given in the move class
+        valid_squares = []
+
+        for square in squares:
+            if (
+                int_str_file_map[square.file] in origin_file
+                or int_str_rank_map[square.rank] in origin_rank
+            ):
+                valid_squares.append(square)
+
+        if not len(valid_squares):
             raise IllegalMoveError("That is not a valid move!")
-        elif len(squares) > 1:
+
+        if len(valid_squares) > 1:
             raise AmbiguousMoveError(
                 f"There is more than one possible move! Please clarify."
             )
 
-        return squares[0]
+        return valid_squares[0]
 
     def valid_move(
         self,
         possible_source: Square,
-        target_colour: Colour,
         target_piece_type: PieceType,
-        move_distance: int,
+        target_colour: Colour,
         move_category: MoveCategory,
+        move_distance: int = 0,
     ) -> bool:
         return (
             possible_source.piece.type == target_piece_type
             and possible_source.piece.colour == target_colour
-            and move_distance <= possible_source.piece.move_limit[move_category]
+            and possible_source.piece.move_limit[move_category] >= move_distance
         )
 
     def king_is_in_check(self, colour: Literal[Colour.WHITE, Colour.BLACK]) -> bool:
@@ -210,10 +228,11 @@ class Board:
         for piece_type in PieceType:
             if piece_type == PieceType.EMPTY:
                 continue
+            squares = self.find_origin_squares(
+                piece_type, king_square, MoveCategory.CAPTURE, other_colour(colour)
+            )
             try:
-                self.find_source_square(
-                    piece_type, king_square, MoveCategory.CAPTURE, other_colour(colour)
-                )
+                self.validate_origin_squares(squares)
                 return True
             except IllegalMoveError:
                 continue
@@ -244,10 +263,11 @@ class Board:
             for piece_type in PieceType:
                 if piece_type != PieceType.EMPTY:
                     for move_category in [MoveCategory.REGULAR, MoveCategory.CAPTURE]:
+                        squares = self.find_origin_squares(
+                            piece_type, square, move_category, colour
+                        )
                         try:
-                            self.find_source_square(
-                                piece_type, square, move_category, colour
-                            )
+                            self.validate_origin_squares(squares)
                         except IllegalMoveError:
                             continue
                         if not self.king_is_in_check(colour):

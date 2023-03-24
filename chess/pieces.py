@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from chess.utils import Colour, MoveCategory
 
@@ -39,15 +38,11 @@ FEN_MAP: dict[str, PieceType] = {
 
 @dataclass
 class Piece:
-    colour: Colour = Colour.BLANK
-    type: PieceType = PieceType.EMPTY
-    move_limit: dict[MoveCategory, int] = {
-        MoveCategory.CAPTURE: 7,
-        MoveCategory.REGULAR: 7,
-    }
+    type: PieceType
+    colour: Colour
+    move_limit: dict[MoveCategory, int]
     moves_made: int = 0
     last_moved: bool = False
-    direction: Optional[Colour] = None
 
     @property
     def has_moved(self) -> bool:
@@ -70,11 +65,9 @@ class Piece:
 
     @staticmethod
     def from_fen(fen: str) -> Piece:
-        colour = Colour.WHITE if fen.islower() else Colour.BLACK
         type = FEN_MAP[fen.lower()]
-        orientation = (
-            [colour] if type == PieceType.PAWN else [Colour.WHITE, Colour.BLACK]
-        )
+        colour = Colour.WHITE if fen.islower() else Colour.BLACK
+
         if type == PieceType.PAWN:
             move_limit = {
                 MoveCategory.CAPTURE: 1,
@@ -90,10 +83,21 @@ class Piece:
                 MoveCategory.CAPTURE: 7,
                 MoveCategory.REGULAR: 7,
             }
-        return Piece(colour, type, move_limit)
+        return Piece(type, colour, move_limit)
 
     def __str__(self):
         return PIECE_STR[self.type][self.colour.value]
+
+    @staticmethod
+    def make_empty_piece() -> Piece:
+        return Piece(
+            PieceType.EMPTY,
+            Colour.BLANK,
+            move_limit={
+                MoveCategory.CAPTURE: 7,
+                MoveCategory.REGULAR: 7,
+            },
+        )
 
 
 if __name__ == "__main__":

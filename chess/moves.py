@@ -123,12 +123,12 @@ def get_neighbour_function(
 ) -> list[NeighbourCalculator]:
     if piece_type == PieceType.PAWN:
         if move_category == MoveCategory.REGULAR:
-            return [get_DS_neighbour] if colour == Colour.WHITE else [get_US_neighbour]
+            return [get_US_neighbour] if colour == Colour.WHITE else [get_DS_neighbour]
         if move_category == MoveCategory.CAPTURE:
             return (
-                [get_DSR_neighbour, get_DSL_neighbour]
+                [get_USR_neighbour, get_USL_neighbour]
                 if colour == Colour.WHITE
-                else [get_USR_neighbour, get_USL_neighbour]
+                else [get_DSR_neighbour, get_DSL_neighbour]
             )
 
     else:

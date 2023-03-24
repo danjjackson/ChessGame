@@ -8,11 +8,15 @@ int_str_file_map = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "
 int_str_rank_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5", 5: "6", 6: "7", 7: "8"}
 
 
+def empty_piece() -> Piece:
+    return Piece.make_empty_piece()
+
+
 @dataclass
 class Square:
-    file: int = 0
-    rank: int = 0
-    piece: Piece = field(default_factory=Piece)
+    file: int
+    rank: int
+    piece: Piece = field(default_factory=empty_piece)
 
     @property
     def is_empty(self) -> bool:
@@ -25,15 +29,14 @@ class Square:
         self.piece = piece
 
     def move_piece(self, destination: Square, undo: bool = False):
-        piece = self.piece
-        piece.move() if not undo else piece.undo()
-        destination.piece = piece
+        self.piece.move() if not undo else self.piece.undo()
+        destination.piece = self.piece
 
-        self.piece = Piece()
+        self.piece = Piece.make_empty_piece()
 
     def __str__(self):
         return (
             f"{int_str_file_map[self.file]}{int_str_rank_map[self.rank]} is empty"
-            if self.piece.type == PieceType.EMPTY
+            if self.piece == None
             else f"There is a {str(self.piece)} on {int_str_file_map[self.file]}{int_str_rank_map[self.rank]}"
         )
