@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Self
 
 from chess.utils import Colour, MoveCategory
 
@@ -16,14 +17,14 @@ class PieceType(Enum):
     KING = "king"
 
 
-PIECE_STR: dict[PieceType, tuple[str, str]] = {
-    PieceType.EMPTY: (" ", " "),
-    PieceType.PAWN: ("♟", "♙"),
-    PieceType.ROOK: ("♜", "♖"),
-    PieceType.BISHOP: ("♝", "♗"),
-    PieceType.QUEEN: ("♛", "♕"),
-    PieceType.KING: ("♚", "♔"),
-    PieceType.KNIGHT: ("♞", "♘"),
+PIECE_STR: dict[PieceType, dict[Colour, str]] = {
+    PieceType.EMPTY: {Colour.WHITE: " ", Colour.BLACK: " ", Colour.BLANK: " "},
+    PieceType.PAWN: {Colour.WHITE: "♟", Colour.BLACK: "♙"},
+    PieceType.ROOK: {Colour.WHITE: "♜", Colour.BLACK: "♖"},
+    PieceType.BISHOP: {Colour.WHITE: "♝", Colour.BLACK: "♗"},
+    PieceType.QUEEN: {Colour.WHITE: "♛", Colour.BLACK: "♕"},
+    PieceType.KING: {Colour.WHITE: "♚", Colour.BLACK: "♔"},
+    PieceType.KNIGHT: {Colour.WHITE: "♞", Colour.BLACK: "♘"},
 }
 
 FEN_MAP: dict[str, PieceType] = {
@@ -63,8 +64,8 @@ class Piece:
     def promote_to(self, piece_type: PieceType) -> None:
         self.type = piece_type
 
-    @staticmethod
-    def from_fen(fen: str) -> Piece:
+    @classmethod
+    def from_fen(cls, fen: str) -> Self:
         type = FEN_MAP[fen.lower()]
         colour = Colour.WHITE if fen.islower() else Colour.BLACK
 
@@ -83,14 +84,14 @@ class Piece:
                 MoveCategory.CAPTURE: 7,
                 MoveCategory.REGULAR: 7,
             }
-        return Piece(type, colour, move_limit)
+        return cls(type, colour, move_limit)
 
     def __str__(self):
-        return PIECE_STR[self.type][self.colour.value]
+        return PIECE_STR[self.type][self.colour]
 
-    @staticmethod
-    def make_empty_piece() -> Piece:
-        return Piece(
+    @classmethod
+    def make_empty_piece(cls) -> Self:
+        return cls(
             PieceType.EMPTY,
             Colour.BLANK,
             move_limit={

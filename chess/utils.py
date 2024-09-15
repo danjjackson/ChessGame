@@ -1,4 +1,4 @@
-from enum import Enum, StrEnum, auto
+from enum import StrEnum, auto
 from typing import Literal
 
 notation_map = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
@@ -22,10 +22,10 @@ class MoveCategory(StrEnum):
     LONG_CASTLE = auto()
 
 
-class Colour(Enum):
-    BLANK = -1
-    WHITE = 0
-    BLACK = 1
+class Colour(StrEnum):
+    WHITE = "White"
+    BLACK = "Black"
+    BLANK = ""
 
 
 def other_colour(
@@ -33,5 +33,4 @@ def other_colour(
 ) -> Literal[Colour.WHITE, Colour.BLACK]:
     if colour == Colour.WHITE:
         return Colour.BLACK
-    else:
-        return Colour.WHITE
+    return Colour.WHITE

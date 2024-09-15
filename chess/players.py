@@ -18,8 +18,7 @@ PIECE_VALUE: dict[PieceType, int] = {
 
 @dataclass
 class Player:
-    first_name: str
-    last_name: str
+    name: str
     rating: int
     colour: Literal[Colour.WHITE, Colour.BLACK] = Colour.WHITE
     pieces_captured: list[Piece] = field(default_factory=list)
@@ -34,6 +33,6 @@ class Player:
 
     def __str__(self):
         self.clean_pieces_captured_list()
-        return f"{self.first_name} {self.last_name} ({self.rating})" + (
+        return f"{self.name} ({self.rating})" + (
             " {}" * len(self.pieces_captured)
         ).format(*self.pieces_captured)

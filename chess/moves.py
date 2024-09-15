@@ -55,7 +55,7 @@ def get_knight_squares(board: Board, square: Square) -> list[Square]:
         (square.file - 2, square.rank - 1),
     ]
 
-    squares = []
+    squares: list[Square] = []
     for coordinate in coordinates:
         try:
             square = board.get_square(*coordinate)
@@ -140,7 +140,7 @@ PIECE_MOVEMENT: dict[PieceType, list[NeighbourCalculator]] = {
         get_DSL_neighbour,
         get_DSR_neighbour,
         get_USR_neighbour,
-        get_DSL_neighbour,
+        get_USL_neighbour,
     ],
     PieceType.ROOK: [
         get_SL_neighbour,
@@ -156,7 +156,7 @@ PIECE_MOVEMENT: dict[PieceType, list[NeighbourCalculator]] = {
         get_DSL_neighbour,
         get_DSR_neighbour,
         get_USR_neighbour,
-        get_DSL_neighbour,
+        get_USL_neighbour,
     ],
     PieceType.KING: [
         get_SL_neighbour,
@@ -166,6 +166,6 @@ PIECE_MOVEMENT: dict[PieceType, list[NeighbourCalculator]] = {
         get_DSL_neighbour,
         get_DSR_neighbour,
         get_USR_neighbour,
-        get_DSL_neighbour,
+        get_USL_neighbour,
     ],
 }

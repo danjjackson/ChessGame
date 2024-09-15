@@ -37,6 +37,6 @@ class Square:
     def __str__(self):
         return (
             f"{int_str_file_map[self.file]}{int_str_rank_map[self.rank]} is empty"
-            if self.piece == None
+            if self.piece.type == PieceType.EMPTY
             else f"There is a {str(self.piece)} on {int_str_file_map[self.file]}{int_str_rank_map[self.rank]}"
         )

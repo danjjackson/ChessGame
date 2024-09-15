@@ -1,11 +1,18 @@
 from chess.board import Board
-from chess.exceptions import Checkmate, IllegalMoveError, NotationError
+from chess.exceptions import (
+    Checkmate,
+    IllegalMoveError,
+    NotationError,
+    AmbiguousMoveError,
+)
 from chess.pieces import Colour
 from chess.players import Player
 from chess.ui import CLI
 
 
-def alternate_players(white_player, black_player, start: Colour = Colour.WHITE):
+def alternate_players(
+    white_player: Player, black_player: Player, start: Colour = Colour.WHITE
+):
     if start == Colour.WHITE:
         while True:
             yield white_player
@@ -61,7 +68,7 @@ class ChessGame:
                 source_square = self.board.validate_origin_squares(
                     possible_origin_squares, move.src_file, move.src_rank
                 )
-            except IllegalMoveError as e:
+            except (IllegalMoveError, AmbiguousMoveError) as e:
                 print(e.message)
                 continue
             try:

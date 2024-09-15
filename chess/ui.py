@@ -11,11 +11,12 @@ from chess.utils import Colour, position_map
 class CLI:
     @staticmethod
     def make_player(colour: Literal[Colour.WHITE, Colour.BLACK]) -> Player:
-        first_name = input("Enter your first name: ")
-        last_name = input("Enter your last name: ")
-        rating = int(input("Enter your rating: "))
+        name = input(f"{colour.value} Player, please enter your name: ")
+        rating = int(
+            input(f"{colour.value} Player, please enter your rating (integer value): ")
+        )
 
-        return Player(first_name, last_name, rating, colour)
+        return Player(name, rating, colour)
 
     @staticmethod
     def parse_move(move: str, board: Board, player: Player) -> Move:
@@ -26,35 +27,47 @@ class CLI:
             return Move(
                 player=player,
                 piece_type=PieceType.KING,
-                destination=board.get_square(*position_map[("g", "1")])
-                if player.colour == Colour.WHITE
-                else board.get_square(*position_map[("g", "8")]),
+                destination=(
+                    board.get_square(*position_map[("g", "1")])
+                    if player.colour == Colour.WHITE
+                    else board.get_square(*position_map[("g", "8")])
+                ),
                 move_category=MoveCategory.SHORT_CASTLE,
-                castle_rook_origin=board.get_square(*position_map[("h", "1")])
-                if player.colour == Colour.WHITE
-                else board.get_square(*position_map[("h", "8")]),
-                castle_rook_destination=board.get_square(*position_map[("f", "1")])
-                if player.colour == Colour.WHITE
-                else board.get_square(*position_map[("f", "8")]),
+                castle_rook_origin=(
+                    board.get_square(*position_map[("h", "1")])
+                    if player.colour == Colour.WHITE
+                    else board.get_square(*position_map[("h", "8")])
+                ),
+                castle_rook_destination=(
+                    board.get_square(*position_map[("f", "1")])
+                    if player.colour == Colour.WHITE
+                    else board.get_square(*position_map[("f", "8")])
+                ),
             )
         if move == "0-0-0":
             return Move(
                 player=player,
                 piece_type=PieceType.KING,
-                destination=board.get_square(*position_map[("c", "1")])
-                if player.colour == Colour.WHITE
-                else board.get_square(*position_map[("c", "8")]),
+                destination=(
+                    board.get_square(*position_map[("c", "1")])
+                    if player.colour == Colour.WHITE
+                    else board.get_square(*position_map[("c", "8")])
+                ),
                 move_category=MoveCategory.SHORT_CASTLE,
-                castle_rook_origin=board.get_square(*position_map[("a", "1")])
-                if player.colour == Colour.WHITE
-                else board.get_square(*position_map[("a", "8")]),
-                castle_rook_destination=board.get_square(*position_map[("d", "1")])
-                if player.colour == Colour.WHITE
-                else board.get_square(*position_map[("d", "8")]),
+                castle_rook_origin=(
+                    board.get_square(*position_map[("a", "1")])
+                    if player.colour == Colour.WHITE
+                    else board.get_square(*position_map[("a", "8")])
+                ),
+                castle_rook_destination=(
+                    board.get_square(*position_map[("d", "1")])
+                    if player.colour == Colour.WHITE
+                    else board.get_square(*position_map[("d", "8")])
+                ),
             )
 
         x = move.find("x")
-        if x == 1 or x == 2:
+        if x in (1, 2):
             move_category = MoveCategory.CAPTURE
         elif x == -1:
             move_category = MoveCategory.REGULAR
@@ -66,8 +79,10 @@ class CLI:
         if move[0].isupper():
             try:
                 piece_type = FEN_MAP[move[0].lower()]
-            except KeyError:
-                raise NotationError(message="That is not a valid symbol for a piece")
+            except KeyError as err:
+                raise NotationError(
+                    message="That is not a valid symbol for a piece"
+                ) from err
             if move[1].isnumeric():
                 src_rank = move[1]
             elif move_category == MoveCategory.REGULAR and not move[2].isnumeric():
@@ -82,8 +97,8 @@ class CLI:
         if "=" not in move:
             try:
                 destination = board.get_square(*position_map[(move[-2], move[-1])])
-            except OutOfBoundsError:
-                raise NotationError(message="That is not a valid square.")
+            except OutOfBoundsError as err:
+                raise NotationError(message="That is not a valid square.") from err
             return Move(
                 player=player,
                 piece_type=piece_type,
@@ -92,25 +107,24 @@ class CLI:
                 src_file=src_file,
                 src_rank=src_rank,
             )
-        else:
-            try:
-                destination = board.get_square(*position_map[(move[-4], move[-3])])
-            except OutOfBoundsError:
-                raise NotationError(message="That is not a valid sqaure.")
+        try:
+            destination = board.get_square(*position_map[(move[-4], move[-3])])
+        except OutOfBoundsError as err:
+            raise NotationError(message="That is not a valid sqaure.") from err
 
-            promote_to = FEN_MAP[move[-1]]
+        promote_to = FEN_MAP[move[-1]]
 
-            return Move(
-                player=player,
-                piece_type=piece_type,
-                destination=destination,
-                move_category=move_category,
-                src_file=src_file,
-                src_rank=src_rank,
-                promote_to=promote_to,
-            )
+        return Move(
+            player=player,
+            piece_type=piece_type,
+            destination=destination,
+            move_category=move_category,
+            src_file=src_file,
+            src_rank=src_rank,
+            promote_to=promote_to,
+        )
 
-    def move_prompt(self, colour):
+    def move_prompt(self, colour: Colour):
         move = input(f"{colour} player: Please enter a move: ")
         return move
 

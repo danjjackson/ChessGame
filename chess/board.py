@@ -189,21 +189,22 @@ class Board:
 
         # If there are multiple origin squares, check each one to see if it matches the
         # extra info given in the move class
-        valid_squares = []
+        valid_squares: list[Square] = [
+            x
+            for x in squares
+            if int_str_file_map[x.file] in origin_file
+            and int_str_rank_map[x.rank] in origin_rank
+        ]
 
-        for square in squares:
-            if (
-                int_str_file_map[square.file] in origin_file
-                or int_str_rank_map[square.rank] in origin_rank
-            ):
-                valid_squares.append(square)
-
-        if not len(valid_squares):
+        if not valid_squares:
             raise IllegalMoveError("That is not a valid move!")
 
         if len(valid_squares) > 1:
+            print(origin_file)
+            print(origin_rank)
+            exit()
             raise AmbiguousMoveError(
-                f"There is more than one possible move! Please clarify."
+                f"There is more than one possible move! The valid origin squares are {[str(square) for square in valid_squares]} Please clarify."
             )
 
         return valid_squares[0]
